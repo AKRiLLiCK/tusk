@@ -43,13 +43,14 @@ impl TuskEngine {
     }
 
     /// Run all rules in priority order until fixpoint.
-    pub fn run(&mut self) {
+    // Inside src/engine.rs, update the run() method:
+pub fn run(&mut self) {
     use crate::heuristics::{AlpesIBP, PhaseZeroSimplifier, Substitution, SumRule}; 
     use crate::risch::RationalHermiteReduction;
 
     let rules: Vec<&dyn Transform> = vec![
         &PhaseZeroSimplifier,
-        &SumRule,
+        &SumRule, // <--- Add this
         &Substitution,
         &AlpesIBP,
         &RationalHermiteReduction,
