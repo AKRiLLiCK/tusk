@@ -7,17 +7,36 @@ pub struct BasicIntegration;
 
 impl Transform for BasicIntegration {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
-        let Expr::Integral { integrand, variable } = expr else { return None; };
-        
-        // Attempt to integrate the integrand
-        if let Some(result) = crate::calculus::simple_integrate(integrand, variable) {
-            return Some(Transformation {
-                new_state: result,
-                description: "Basic Integration".into(),
-                rule: crate::engine::RuleType::PhaseZero("BasicIntegration".into()),
-            });
+        match expr {
+            Expr::Integral { integrand, variable } => {
+                crate::calculus::simple_integrate(integrand, variable).map(|new_state| Transformation {
+                    new_state,
+                    description: "Basic Integration: Evaluated Integral".into(),
+                    rule: RuleType::PhaseZero("BasicIntegration".into()),
+                })
+            }
+            Expr::Add(left, right) => {
+                let left_solved = if let Expr::Integral { .. } = &**left {
+                    crate::heuristics::BasicIntegration.apply(left).map(|t| t.new_state)
+                } else { None };
+
+                let right_solved = if let Expr::Integral { .. } = &**right {
+                    crate::heuristics::BasicIntegration.apply(right).map(|t| t.new_state)
+                } else { None };
+
+                if left_solved.is_some() || right_solved.is_some() {
+                    Some(Transformation {
+                        new_state: Expr::Add(
+                            Box::new(left_solved.unwrap_or_else(|| *left.clone())),
+                            Box::new(right_solved.unwrap_or_else(|| *right.clone())),
+                        ),
+                        description: "Basic Integration: Solved partial integrals".into(),
+                        rule: RuleType::PhaseZero("BasicIntegration".into()),
+                    })
+                } else { None }
+            }
+            _ => None,
         }
-        None
     }
 }
 
