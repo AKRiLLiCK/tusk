@@ -4,7 +4,6 @@ mod engine;
 mod heuristics;
 mod risch;
 
-// Only compile UI code and terminal dependencies for Desktop builds
 #[cfg(not(target_arch = "wasm32"))]
 mod ui;
 
@@ -38,7 +37,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-// Main function stub for Wasm builds to avoid linker errors
 #[cfg(target_arch = "wasm32")]
 fn main() {}
 

@@ -3,6 +3,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{alpha1, char, digit1, multispace0, one_of},
     combinator::{map, opt, recognize},
+    error::Error,
     multi::many0,
     sequence::{delimited, pair},
     IResult,
@@ -55,35 +56,41 @@ impl std::fmt::Display for Expr {
     }
 }
 
-fn ws<'a, O, E, F>(f: F) -> impl Parser<&'a str, Output = O, Error = E>
+fn ws<'a, O, F>(f: F) -> impl Parser<&'a str, Output = O, Error = Error<&'a str>>
 where
-    F: Parser<&'a str, Output = O, Error = E>,
-    E: nom::error::ParseError<&'a str>,
+    F: Parser<&'a str, Output = O, Error = Error<&'a str>>,
 {
     delimited(multispace0, f, multispace0)
 }
 
-fn parse_const(input: &str) -> IResult<&str, Expr> {
+fn parse_const(input: &str) -> IResult<&str, Expr, Error<&str>> {
     map(ws(recognize(pair(digit1, opt(pair(char('.'), digit1))))), |s: &str| {
         Expr::Const(s.parse().unwrap_or(0.0))
     }).parse(input)
 }
 
-fn parse_var(input: &str) -> IResult<&str, Expr> {
+fn parse_var(input: &str) -> IResult<&str, Expr, Error<&str>> {
     map(ws(alpha1), |s: &str| Expr::Var(s.to_string())).parse(input)
 }
 
-fn parse_integral(input: &str) -> IResult<&str, Expr> {
+fn parse_integral(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, _) = ws(tag("int")).parse(input)?;
     let (input, _) = ws(char('(')).parse(input)?;
     let (input, integrand) = expr(input)?;
-    let (input, _) = ws(char(',')).parse(input)?;
-    let (input, variable) = ws(alpha1).parse(input)?;
+    
+    let (input, variable) = match ws(char(',')).parse(input) {
+        Ok((i, _)) => {
+            let (i, var) = ws(alpha1).parse(i)?;
+            (i, var.to_string())
+        }
+        Err(_) => (input, "x".to_string()),
+    };
+    
     let (input, _) = ws(char(')')).parse(input)?;
-    Ok((input, Expr::Integral { integrand: Box::new(integrand), variable: variable.to_string() }))
+    Ok((input, Expr::Integral { integrand: Box::new(integrand), variable }))
 }
 
-fn parse_primary(input: &str) -> IResult<&str, Expr> {
+fn parse_primary(input: &str) -> IResult<&str, Expr, Error<&str>> {
     alt((
         parse_integral,
         parse_const,
@@ -92,7 +99,7 @@ fn parse_primary(input: &str) -> IResult<&str, Expr> {
     )).parse(input)
 }
 
-fn parse_factor(input: &str) -> IResult<&str, Expr> {
+fn parse_factor(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, init) = parse_primary(input)?;
     let (input, rest) = many0(pair(ws(char('^')), parse_primary)).parse(input)?;
     Ok((input, rest.into_iter().fold(init, |acc, (_, rhs)| {
@@ -100,7 +107,7 @@ fn parse_factor(input: &str) -> IResult<&str, Expr> {
     })))
 }
 
-fn parse_term(input: &str) -> IResult<&str, Expr> {
+fn parse_term(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, init) = parse_factor(input)?;
     let (input, rest) = many0(pair(ws(one_of("*/")), parse_factor)).parse(input)?;
     Ok((input, rest.into_iter().fold(init, |acc, (op, rhs)| match op {
@@ -110,7 +117,7 @@ fn parse_term(input: &str) -> IResult<&str, Expr> {
     })))
 }
 
-fn expr(input: &str) -> IResult<&str, Expr> {
+fn expr(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, init) = parse_term(input)?;
     let (input, rest) = many0(pair(ws(one_of("+-")), parse_term)).parse(input)?;
     Ok((input, rest.into_iter().fold(init, |acc, (op, rhs)| match op {

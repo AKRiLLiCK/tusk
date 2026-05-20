@@ -1,8 +1,6 @@
 use crate::ast::Expr;
 use crate::engine::{RuleType, Transform, Transformation};
 
-// ── Phase Zero: algebraic identities ────────────────────────────────
-
 pub struct PhaseZeroSimplifier;
 pub struct SumRule;
 
@@ -86,16 +84,14 @@ fn simplify(expr: &Expr) -> Option<Expr> {
     }
 }
 
-// ── ALPES: Integration by Parts ─────────────────────────────────────
-
 pub struct AlpesIBP;
 
 fn alpes_score(expr: &Expr) -> i32 {
     match expr {
-        Expr::Ln(_)                    => 4, // L
-        Expr::Var(_) | Expr::Pow(..)   => 3, // A (algebraic)
-        Expr::Exp(_)                   => 2, // E
-        Expr::Sin(_) | Expr::Cos(_)    => 1, // S
+        Expr::Ln(_)                    => 4,
+        Expr::Var(_) | Expr::Pow(..)   => 3,
+        Expr::Exp(_)                   => 2,
+        Expr::Sin(_) | Expr::Cos(_)    => 1,
         _                              => 0,
     }
 }
@@ -114,7 +110,6 @@ impl Transform for AlpesIBP {
         let v = crate::calculus::simple_integrate(dv, variable)?;
         let du = crate::calculus::derive(u, variable);
 
-        // u·v − ∫ v·du dx
         let new_expr = Expr::Sub(
             Box::new(Expr::Mul(u.clone(), Box::new(v.clone()))),
             Box::new(Expr::Integral {
@@ -131,14 +126,10 @@ impl Transform for AlpesIBP {
     }
 }
 
-// ── Substitution (heuristic entry point) ────────────────────────────
-
 pub struct Substitution;
 
 impl Transform for Substitution {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
-        // Stub: full u-substitution matching requires expression unification.
-        // The entry point is wired into the pipeline for future expansion.
         let Expr::Integral { integrand, variable } = expr else { return None; };
         let Expr::Mul(left, right) = &**integrand else { return None; };
         let _ = (crate::calculus::derive(left, variable), crate::calculus::derive(right, variable));
