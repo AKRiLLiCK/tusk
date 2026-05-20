@@ -53,10 +53,10 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
             match key.code {
                 KeyCode::Char(c) => {
                     app.input.push(c);
-                    // Try parsing
                     if let Ok(expr) = ast::Expr::parse(&app.input) {
                         let mut engine = engine::TuskEngine::new(expr);
                         engine.run();
+                        app.selected_step = engine.steps.len();
                         app.engine = Some(engine);
                     } else {
                         app.engine = None;
@@ -64,10 +64,10 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
                 }
                 KeyCode::Backspace => {
                     app.input.pop();
-                    // Try parsing
                     if let Ok(expr) = ast::Expr::parse(&app.input) {
                         let mut engine = engine::TuskEngine::new(expr);
                         engine.run();
+                        app.selected_step = engine.steps.len();
                         app.engine = Some(engine);
                     } else {
                         app.engine = None;
@@ -79,9 +79,24 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
                         if let Ok(expr) = ast::Expr::parse(&app.input) {
                             let mut engine = engine::TuskEngine::new(expr);
                             engine.run();
+                            app.selected_step = engine.steps.len();
                             app.engine = Some(engine);
                         } else {
                             app.engine = None;
+                        }
+                    }
+                }
+                KeyCode::Up => {
+                    if let Some(engine) = &app.engine {
+                        if app.selected_step > 0 {
+                            app.selected_step -= 1;
+                        }
+                    }
+                }
+                KeyCode::Down => {
+                    if let Some(engine) = &app.engine {
+                        if app.selected_step < engine.steps.len() {
+                            app.selected_step += 1;
                         }
                     }
                 }

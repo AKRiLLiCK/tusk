@@ -11,6 +11,7 @@ use crate::engine::TuskEngine;
 pub struct App {
     pub engine: Option<TuskEngine>,
     pub input: String,
+    pub selected_step: usize,
 }
 
 impl App {
@@ -18,6 +19,7 @@ impl App {
         Self {
             engine: None,
             input: String::new(),
+            selected_step: 0,
         }
     }
 }
@@ -50,13 +52,11 @@ pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
-        .constraints(
-            [
-                Constraint::Length(3),
-                Constraint::Min(0),
-            ]
-            .as_ref(),
-        )
+        .constraints([
+            Constraint::Length(3), // Input box
+            Constraint::Length(6), // AST time-travel state
+            Constraint::Min(1),    // Steps
+        ])
         .split(f.area());
 
     let suggestion = get_suggestion(&app.input).unwrap_or("");
@@ -70,22 +70,38 @@ pub fn draw(f: &mut Frame, app: &mut App) {
 
     f.render_widget(input_display, chunks[0]);
 
-    let steps_content = if let Some(engine) = &app.engine {
-        if engine.steps.is_empty() {
-            format!("Parsed: {:?}", engine.current_expr)
+    let current_expr_str = if let Some(engine) = &app.engine {
+        if app.selected_step < engine.steps.len() {
+            format!("{:#?}", engine.steps[app.selected_step].initial_state)
         } else {
-            let mut s = String::new();
-            for (i, step) in engine.steps.iter().enumerate() {
-                s.push_str(&format!("Step {}: {}\n", i + 1, step.transformation.description));
-            }
-            s
+            format!("{:#?}", engine.current_expr)
         }
     } else {
-        "Type an expression to parse...".to_string()
+        "No valid expression parsed.".to_string()
     };
 
-    let steps_display = Paragraph::new(steps_content)
-        .block(Block::default().borders(Borders::ALL).title(" Integration Steps "));
+    let state_display = Paragraph::new(current_expr_str)
+        .block(Block::default().borders(Borders::ALL).title(" Time-Travel State (AST) "));
+    f.render_widget(state_display, chunks[1]);
 
-    f.render_widget(steps_display, chunks[1]);
+    if let Some(engine) = &app.engine {
+        use ratatui::widgets::{List, ListItem};
+        
+        let items: Vec<ListItem> = engine.steps.iter().enumerate().map(|(i, step)| {
+            let prefix = if i == app.selected_step { ">> " } else { "   " };
+            let content = format!("{}{}: {:?}", prefix, step.transformation.description, step.transformation.rule);
+            let style = if i == app.selected_step { Style::default().fg(Color::Cyan) } else { Style::default() };
+            ListItem::new(content).style(style)
+        }).collect();
+
+        let final_prefix = if app.selected_step == engine.steps.len() { ">> " } else { "   " };
+        let final_style = if app.selected_step == engine.steps.len() { Style::default().fg(Color::Cyan) } else { Style::default() };
+        let mut all_items = items;
+        all_items.push(ListItem::new(format!("{}Final Result", final_prefix)).style(final_style));
+
+        let list = List::new(all_items)
+            .block(Block::default().borders(Borders::ALL).title(" Transformation Steps [Up/Down to Time-Travel] "));
+        
+        f.render_widget(list, chunks[2]);
+    }
 }
