@@ -90,9 +90,26 @@ fn parse_integral(input: &str) -> IResult<&str, Expr, Error<&str>> {
     Ok((input, Expr::Integral { integrand: Box::new(integrand), variable }))
 }
 
+// Parses function calls like sin(x), cos(x), exp(x), ln(x)
+fn parse_fn_call(input: &str) -> IResult<&str, Expr, Error<&str>> {
+    let (input, name) = ws(alpha1).parse(input)?;
+    let (input, _) = ws(char('(')).parse(input)?;
+    let (input, arg) = expr(input)?;
+    let (input, _) = ws(char(')')).parse(input)?;
+
+    match name {
+        "sin" => Ok((input, Expr::Sin(Box::new(arg)))),
+        "cos" => Ok((input, Expr::Cos(Box::new(arg)))),
+        "exp" => Ok((input, Expr::Exp(Box::new(arg)))),
+        "ln"  => Ok((input, Expr::Ln(Box::new(arg)))),
+        _ => Err(nom::Err::Failure(Error::new(name, nom::error::ErrorKind::Tag))),
+    }
+}
+
 fn parse_primary(input: &str) -> IResult<&str, Expr, Error<&str>> {
     alt((
         parse_integral,
+        parse_fn_call,
         parse_const,
         parse_var,
         delimited(ws(char('(')), expr, ws(char(')'))),
