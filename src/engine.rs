@@ -44,26 +44,27 @@ impl TuskEngine {
 
     /// Run all rules in priority order until fixpoint.
     pub fn run(&mut self) {
-        use crate::heuristics::{AlpesIBP, PhaseZeroSimplifier, Substitution};
-        use crate::risch::RationalHermiteReduction;
+    use crate::heuristics::{AlpesIBP, PhaseZeroSimplifier, Substitution, SumRule}; // Import SumRule
+    use crate::risch::RationalHermiteReduction;
 
-        let rules: Vec<&dyn Transform> = vec![
-            &PhaseZeroSimplifier,
-            &Substitution,
-            &AlpesIBP,
-            &RationalHermiteReduction,
-        ];
+    let rules: Vec<&dyn Transform> = vec![
+        &PhaseZeroSimplifier,
+        &SumRule, // Register SumRule here
+        &Substitution,
+        &AlpesIBP,
+        &RationalHermiteReduction,
+    ];
 
-        loop {
-            let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
-            match found {
-                Some(trans) => {
-                    self.steps.push(Step {
-                        initial_state: self.current_expr.clone(),
-                        transformation: trans.clone(),
-                    });
-                    self.current_expr = trans.new_state;
-                }
+    loop {
+        let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
+        match found {
+            Some(trans) => {
+                self.steps.push(Step {
+                    initial_state: self.current_expr.clone(),
+                    transformation: trans.clone(),
+                });
+                self.current_expr = trans.new_state;
+            }
                 None => break,
             }
         }

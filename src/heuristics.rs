@@ -4,6 +4,25 @@ use crate::engine::{RuleType, Transform, Transformation};
 // ── Phase Zero: algebraic identities ────────────────────────────────
 
 pub struct PhaseZeroSimplifier;
+pub struct SumRule;
+
+impl Transform for SumRule {
+    fn apply(&self, expr: &Expr) -> Option<Transformation> {
+        let Expr::Integral { integrand, variable } = expr else { return None; };
+        
+        if let Expr::Add(left, right) = &**integrand {
+            return Some(Transformation {
+                new_state: Expr::Add(
+                    Box::new(Expr::Integral { integrand: left.clone(), variable: variable.clone() }),
+                    Box::new(Expr::Integral { integrand: right.clone(), variable: variable.clone() }),
+                ),
+                description: "Sum Rule: Linearity of Integration".into(),
+                rule: RuleType::PhaseZero("SumRule".into()),
+            });
+        }
+        None
+    }
+}
 
 impl Transform for PhaseZeroSimplifier {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
