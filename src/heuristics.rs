@@ -8,29 +8,41 @@ pub struct BasicIntegration;
 impl Transform for BasicIntegration {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
         match expr {
+            // Rule 1: Handle simple integrals (e.g., int(x), int(5))
             Expr::Integral { integrand, variable } => {
+                // If it's a sum, split it: int(a+b) -> int(a) + int(b)
+                if let Expr::Add(left, right) = &**integrand {
+                    return Some(Transformation {
+                        new_state: Expr::Add(
+                            Box::new(Expr::Integral { integrand: left.clone(), variable: variable.clone() }),
+                            Box::new(Expr::Integral { integrand: right.clone(), variable: variable.clone() }),
+                        ),
+                        description: "Sum Rule: Linearity".into(),
+                        rule: RuleType::PhaseZero("SumRule".into()),
+                    });
+                }
+                
+                // If it's not a sum, try to solve it using calculus::simple_integrate
                 crate::calculus::simple_integrate(integrand, variable).map(|new_state| Transformation {
                     new_state,
-                    description: "Basic Integration: Evaluated Integral".into(),
+                    description: "Basic Integration: Evaluated".into(),
                     rule: RuleType::PhaseZero("BasicIntegration".into()),
                 })
             }
+            
+            // Rule 2: Handle Add nodes (e.g., int(x) + int(5)) 
+            // This allows solving each side of the sum independently
             Expr::Add(left, right) => {
-                let left_solved = if let Expr::Integral { .. } = &**left {
-                    crate::heuristics::BasicIntegration.apply(left).map(|t| t.new_state)
-                } else { None };
-
-                let right_solved = if let Expr::Integral { .. } = &**right {
-                    crate::heuristics::BasicIntegration.apply(right).map(|t| t.new_state)
-                } else { None };
+                let left_solved = self.apply(left);
+                let right_solved = self.apply(right);
 
                 if left_solved.is_some() || right_solved.is_some() {
                     Some(Transformation {
                         new_state: Expr::Add(
-                            Box::new(left_solved.unwrap_or_else(|| *left.clone())),
-                            Box::new(right_solved.unwrap_or_else(|| *right.clone())),
+                            Box::new(left_solved.map(|t| t.new_state).unwrap_or_else(|| *left.clone())),
+                            Box::new(right_solved.map(|t| t.new_state).unwrap_or_else(|| *right.clone())),
                         ),
-                        description: "Basic Integration: Solved partial integrals".into(),
+                        description: "Basic Integration: Solving sub-terms".into(),
                         rule: RuleType::PhaseZero("BasicIntegration".into()),
                     })
                 } else { None }
