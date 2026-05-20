@@ -160,3 +160,22 @@ impl Transform for AlpesIBP {
         None
     }
 }
+
+pub struct Substitution;
+
+impl Transform for Substitution {
+    fn apply(&self, expr: &Expr) -> Option<Transformation> {
+        // A robust u-substitution engine requires complex algebraic matching to find g(x) and g'(x).
+        // Here we demonstrate the heuristic entry point.
+        if let Expr::Integral { integrand, variable } = expr {
+            if let Expr::Mul(left, right) = &**integrand {
+                // If the user inputs something that clearly triggers a substitution, we would catch it here.
+                // For demonstration, we'll return None unless we specifically build out full sub-matching.
+                let _left_derivative = crate::calculus::derive(left, variable);
+                let _right_derivative = crate::calculus::derive(right, variable);
+                // In a full AST, we would check if `left` is `f(right)` and `left_derivative` == `right`.
+            }
+        }
+        None
+    }
+}

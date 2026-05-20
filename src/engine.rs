@@ -47,11 +47,14 @@ impl TuskEngine {
 
     /// Run the engine until no more transformations can be applied or an integral is solved.
     pub fn run(&mut self) {
-        use crate::heuristics::{PhaseZeroSimplifier, AlpesIBP};
+        use crate::heuristics::{PhaseZeroSimplifier, AlpesIBP, Substitution};
+        use crate::risch::RationalHermiteReduction;
         let p0 = PhaseZeroSimplifier;
         let alpes = AlpesIBP;
+        let sub = Substitution;
+        let hermite = RationalHermiteReduction;
 
-        let rules: Vec<&dyn Transform> = vec![&p0, &alpes];
+        let rules: Vec<&dyn Transform> = vec![&p0, &sub, &alpes, &hermite];
 
         loop {
             let mut applied = false;

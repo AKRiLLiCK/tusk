@@ -2,6 +2,7 @@ mod ast;
 mod calculus;
 mod engine;
 mod heuristics;
+mod risch;
 mod ui;
 
 use anyhow::Result;
