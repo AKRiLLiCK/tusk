@@ -51,7 +51,7 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
     match expr {
         Expr::Const(c) => Some(Expr::Mul(
             Box::new(Expr::Const(*c)),
-            Box::new(Expr::Var(var.into())),
+            Box::new(Expr::Var(var.to_string())),
         )),
         Expr::Var(v) if v == var => Some(Expr::Mul(
             Box::new(Expr::Const(0.5)),
