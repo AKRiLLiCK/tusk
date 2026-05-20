@@ -47,19 +47,28 @@ impl TuskEngine {
 
     /// Run the engine until no more transformations can be applied or an integral is solved.
     pub fn run(&mut self) {
-        use crate::heuristics::PhaseZeroSimplifier;
-        let simplifier = PhaseZeroSimplifier;
+        use crate::heuristics::{PhaseZeroSimplifier, AlpesIBP};
+        let p0 = PhaseZeroSimplifier;
+        let alpes = AlpesIBP;
+
+        let rules: Vec<&dyn Transform> = vec![&p0, &alpes];
 
         loop {
-            if let Some(trans) = simplifier.apply(&self.current_expr) {
-                self.steps.push(Step {
-                    initial_state: self.current_expr.clone(),
-                    transformation: trans.clone(),
-                });
-                self.current_expr = trans.new_state;
-                continue;
+            let mut applied = false;
+            for rule in &rules {
+                if let Some(trans) = rule.apply(&self.current_expr) {
+                    self.steps.push(Step {
+                        initial_state: self.current_expr.clone(),
+                        transformation: trans.clone(),
+                    });
+                    self.current_expr = trans.new_state;
+                    applied = true;
+                    break; // Start over from first rule
+                }
             }
-            break;
+            if !applied {
+                break;
+            }
         }
     }
 }

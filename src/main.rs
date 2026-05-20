@@ -1,4 +1,5 @@
 mod ast;
+mod calculus;
 mod engine;
 mod heuristics;
 mod ui;

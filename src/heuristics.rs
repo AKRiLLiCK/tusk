@@ -109,3 +109,54 @@ fn simplify(expr: &Expr) -> Option<Expr> {
         _ => None,
     }
 }
+
+pub struct AlpesIBP;
+
+fn alpes_score(expr: &Expr) -> i32 {
+    match expr {
+        Expr::Ln(_) => 4,
+        Expr::Var(_) | Expr::Pow(..) => 3,
+        Expr::Exp(_) => 2,
+        Expr::Sin(_) | Expr::Cos(_) => 1,
+        _ => 0,
+    }
+}
+
+impl Transform for AlpesIBP {
+    fn apply(&self, expr: &Expr) -> Option<Transformation> {
+        if let Expr::Integral { integrand, variable } = expr {
+            if let Expr::Mul(left, right) = &**integrand {
+                let score_l = alpes_score(left);
+                let score_r = alpes_score(right);
+                
+                let (u, dv) = if score_l >= score_r {
+                    (left.clone(), right.clone())
+                } else {
+                    (right.clone(), left.clone())
+                };
+                
+                // Attempt to integrate dv
+                if let Some(v) = crate::calculus::simple_integrate(&dv, variable) {
+                    let du = crate::calculus::derive(&u, variable);
+                    
+                    // u * v - int(v * du)
+                    let new_integrand = Expr::Mul(Box::new(v.clone()), Box::new(du.clone()));
+                    let new_expr = Expr::Sub(
+                        Box::new(Expr::Mul(u.clone(), Box::new(v))),
+                        Box::new(Expr::Integral {
+                            integrand: Box::new(new_integrand),
+                            variable: variable.clone(),
+                        }),
+                    );
+                    
+                    return Some(Transformation {
+                        new_state: new_expr,
+                        description: "ALPES: Integration by Parts".to_string(),
+                        rule: RuleType::IntegrationByParts { u: *u, dv: *dv, rule_used: "ALPES".to_string() }
+                    });
+                }
+            }
+        }
+        None
+    }
+}
