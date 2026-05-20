@@ -45,12 +45,12 @@ impl TuskEngine {
     /// Run all rules in priority order until fixpoint.
     // Inside src/engine.rs, update the run() method:
 pub fn run(&mut self) {
-    use crate::heuristics::{AlpesIBP, PhaseZeroSimplifier, Substitution, SumRule}; 
+    use crate::heuristics::{SumRule, PhaseZeroSimplifier, AlpesIBP, Substitution};
     use crate::risch::RationalHermiteReduction;
 
     let rules: Vec<&dyn Transform> = vec![
         &PhaseZeroSimplifier,
-        &SumRule, // <--- Add this
+        &SumRule,
         &Substitution,
         &AlpesIBP,
         &RationalHermiteReduction,
@@ -60,10 +60,6 @@ pub fn run(&mut self) {
         let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
         match found {
             Some(trans) => {
-                self.steps.push(Step {
-                    initial_state: self.current_expr.clone(),
-                    transformation: trans.clone(),
-                });
                 self.current_expr = trans.new_state;
             }
                 None => break,

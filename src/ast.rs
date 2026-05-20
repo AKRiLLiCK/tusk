@@ -1,34 +1,16 @@
-use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::{alpha1, char, digit1, multispace0, one_of},
-    combinator::{map, map_res, opt, recognize},
-    multi::many0,
-    sequence::{delimited, pair, preceded, tuple},
-    IResult,
-};
+use nom::{branch::alt, bytes::complete::tag, character::complete::{alpha1, char, digit1, multispace0, one_of}, combinator::{map, map_res, opt, recognize}, multi::many0, sequence::{delimited, pair, preceded, tuple}, IResult};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
-    Var(String),
-    Const(f64),
-    Add(Box<Expr>, Box<Expr>),
-    Sub(Box<Expr>, Box<Expr>),
-    Mul(Box<Expr>, Box<Expr>),
-    Div(Box<Expr>, Box<Expr>),
-    Pow(Box<Expr>, Box<Expr>),
-    Sin(Box<Expr>),
-    Cos(Box<Expr>),
-    Exp(Box<Expr>),
-    Ln(Box<Expr>),
+    Var(String), Const(f64), Add(Box<Expr>, Box<Expr>), Sub(Box<Expr>, Box<Expr>),
+    Mul(Box<Expr>, Box<Expr>), Div(Box<Expr>, Box<Expr>), Pow(Box<Expr>, Box<Expr>),
+    Sin(Box<Expr>), Cos(Box<Expr>), Exp(Box<Expr>), Ln(Box<Expr>),
     Integral { integrand: Box<Expr>, variable: String },
 }
 
 impl Expr {
     pub fn parse(input: &str) -> Result<Self, String> {
-        expr(input)
-            .map(|(_, e)| e)
-            .map_err(|e| format!("Parse error: {e}"))
+        expr(input).map(|(_, e)| e).map_err(|e| format!("Parse error: {e}"))
     }
 }
 

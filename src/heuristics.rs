@@ -12,7 +12,6 @@ impl Transform for SumRule {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
         let Expr::Integral { integrand, variable } = expr else { return None; };
         
-        // Split int(A + B) -> int(A) + int(B)
         if let Expr::Add(left, right) = &**integrand {
             return Some(Transformation {
                 new_state: Expr::Add(
