@@ -42,10 +42,11 @@ impl TuskEngine {
         let rules: Vec<&dyn Transform> = vec![
             &PhaseZeroSimplifier as &dyn Transform,
             &SumRule as &dyn Transform,
+            &crate::heuristics::BasicIntegration as &dyn Transform, // Added this
             &Substitution as &dyn Transform,
             &AlpesIBP as &dyn Transform,
             &RationalHermiteReduction as &dyn Transform,
-        ];
+    ];
 
         loop {
             let found = rules.iter().find_map(|r| r.apply(&self.current_expr));

@@ -3,6 +3,23 @@ use crate::engine::{RuleType, Transform, Transformation};
 
 pub struct PhaseZeroSimplifier;
 pub struct SumRule;
+pub struct BasicIntegration;
+
+impl Transform for BasicIntegration {
+    fn apply(&self, expr: &Expr) -> Option<Transformation> {
+        let Expr::Integral { integrand, variable } = expr else { return None; };
+        
+        // Attempt to integrate the integrand
+        if let Some(result) = crate::calculus::simple_integrate(integrand, variable) {
+            return Some(Transformation {
+                new_state: result,
+                description: "Basic Integration".into(),
+                rule: crate::engine::RuleType::PhaseZero("BasicIntegration".into()),
+            });
+        }
+        None
+    }
+}
 
 impl Transform for SumRule {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {

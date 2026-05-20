@@ -51,7 +51,13 @@ impl std::fmt::Display for Expr {
             Self::Cos(i) => write!(f, "cos({i})"),
             Self::Exp(i) => write!(f, "exp({i})"),
             Self::Ln(i) => write!(f, "ln({i})"),
-            Self::Integral { integrand, variable } => write!(f, "int({integrand}, {variable})"),
+            Self::Integral { integrand, variable } => {
+                if variable == "x" {
+                    write!(f, "int({integrand})")
+                } else {
+                    write!(f, "int({integrand}, {variable})")
+                }
+            },
         }
     }
 }
