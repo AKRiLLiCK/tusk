@@ -7,8 +7,6 @@ use ratatui::{
 };
 use crate::engine::TuskEngine;
 
-// ── Theme ───────────────────────────────────────────────────────────
-
 const CLR_BG:       Color = Color::Rgb(18, 18, 24);
 const CLR_BORDER:   Color = Color::Rgb(58, 58, 80);
 const CLR_TITLE:    Color = Color::Rgb(180, 140, 255);
@@ -31,8 +29,6 @@ fn themed_block(title: &str) -> Block<'_> {
         .style(Style::default().bg(CLR_BG))
 }
 
-// ── App state ───────────────────────────────────────────────────────
-
 pub struct App {
     pub engine: Option<TuskEngine>,
     pub input: String,
@@ -44,7 +40,6 @@ impl App {
         Self { engine: None, input: String::new(), selected_step: 0 }
     }
 
-    /// Re-parse and re-run the engine from the current input.
     pub fn reparse(&mut self) {
         match crate::ast::Expr::parse(&self.input) {
             Ok(expr) => {
@@ -61,8 +56,6 @@ impl App {
     }
 }
 
-// ── Autocomplete ────────────────────────────────────────────────────
-
 const COMMANDS: &[&str] = &["int(", "sin(", "cos(", "exp(", "ln("];
 
 pub fn get_suggestion(input: &str) -> Option<&'static str> {
@@ -71,21 +64,18 @@ pub fn get_suggestion(input: &str) -> Option<&'static str> {
     COMMANDS.iter().find(|cmd| cmd.starts_with(&*word) && **cmd != word).map(|cmd| &cmd[word.len()..])
 }
 
-// ── Draw ────────────────────────────────────────────────────────────
-
 pub fn draw(f: &mut Frame, app: &App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .margin(1)
         .constraints([
-            Constraint::Length(3), // input
-            Constraint::Length(5), // AST state
-            Constraint::Min(3),   // steps list
-            Constraint::Length(1), // status bar
+            Constraint::Length(3),
+            Constraint::Length(5),
+            Constraint::Min(3),
+            Constraint::Length(1),
         ])
         .split(f.area());
 
-    // ── Input box ───────────────────────────────────────────────
     let ghost = get_suggestion(&app.input).unwrap_or("");
     let input_line = Line::from(vec![
         Span::styled(&app.input, Style::default().fg(CLR_INPUT)),
@@ -96,7 +86,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         chunks[0],
     );
 
-    // ── AST state ───────────────────────────────────────────────
     let state_text = match &app.engine {
         Some(engine) if app.selected_step < engine.steps.len() => {
             format!("{}", engine.steps[app.selected_step].initial_state)
@@ -110,7 +99,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         chunks[1],
     );
 
-    // ── Steps list ──────────────────────────────────────────────
     if let Some(engine) = &app.engine {
         let total = engine.steps.len();
         let mut items: Vec<ListItem> = engine.steps.iter().enumerate().map(|(i, step)| {
@@ -130,7 +118,6 @@ pub fn draw(f: &mut Frame, app: &App) {
             ListItem::new(line)
         }).collect();
 
-        // Final result row
         let sel_final = app.selected_step == total;
         items.push(ListItem::new(Line::from(vec![
             Span::styled(if sel_final { "▸ " } else { "  " }, Style::default().fg(if sel_final { CLR_ACTIVE } else { CLR_DIM })),
@@ -154,7 +141,6 @@ pub fn draw(f: &mut Frame, app: &App) {
         );
     }
 
-    // ── Status bar ──────────────────────────────────────────────
     let step_info = match &app.engine {
         Some(e) => format!(" Step {}/{} │ Esc to quit", app.selected_step + 1, e.steps.len() + 1),
         None => " Esc to quit".into(),

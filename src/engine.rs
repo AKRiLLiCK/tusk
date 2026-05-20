@@ -1,6 +1,7 @@
 use crate::ast::Expr;
+use crate::heuristics::{SumRule, PhaseZeroSimplifier, AlpesIBP, Substitution};
+use crate::risch::RationalHermiteReduction;
 
-/// Categorizes the type of rule applied for UI display and coloring.
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
 pub enum RuleType {
@@ -10,28 +11,23 @@ pub enum RuleType {
     HermiteReduction,
 }
 
-/// A single mutation of the AST with metadata.
 #[derive(Debug, Clone)]
 pub struct Transformation {
     pub new_state: Expr,
     pub description: String,
-    #[allow(dead_code)]
     pub rule: RuleType,
 }
 
-/// A complete step: the state before + the transformation applied.
 #[derive(Debug, Clone)]
 pub struct Step {
     pub initial_state: Expr,
     pub transformation: Transformation,
 }
 
-/// The main trait for heuristic rules.
 pub trait Transform {
     fn apply(&self, expr: &Expr) -> Option<Transformation>;
 }
 
-/// Orchestrates the integration pipeline.
 pub struct TuskEngine {
     pub steps: Vec<Step>,
     pub current_expr: Expr,
@@ -42,26 +38,25 @@ impl TuskEngine {
         Self { steps: Vec::new(), current_expr: initial_expr }
     }
 
-    /// Run all rules in priority order until fixpoint.
-    // Inside src/engine.rs, update the run() method:
-pub fn run(&mut self) {
-    use crate::heuristics::{SumRule, PhaseZeroSimplifier, AlpesIBP, Substitution};
-    use crate::risch::RationalHermiteReduction;
+    pub fn run(&mut self) {
+        let rules: Vec<&dyn Transform> = vec![
+            &PhaseZeroSimplifier as &dyn Transform,
+            &SumRule as &dyn Transform,
+            &Substitution as &dyn Transform,
+            &AlpesIBP as &dyn Transform,
+            &RationalHermiteReduction as &dyn Transform,
+        ];
 
-    let rules: Vec<&dyn Transform> = vec![
-        &PhaseZeroSimplifier,
-        &SumRule,
-        &Substitution,
-        &AlpesIBP,
-        &RationalHermiteReduction,
-    ];
-
-    loop {
-        let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
-        match found {
-            Some(trans) => {
-                self.current_expr = trans.new_state;
-            }
+        loop {
+            let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
+            match found {
+                Some(trans) => {
+                    self.steps.push(Step {
+                        initial_state: self.current_expr.clone(),
+                        transformation: trans.clone(),
+                    });
+                    self.current_expr = trans.new_state;
+                }
                 None => break,
             }
         }

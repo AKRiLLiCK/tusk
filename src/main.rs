@@ -3,17 +3,25 @@ mod calculus;
 mod engine;
 mod heuristics;
 mod risch;
+
+// Only compile UI code and terminal dependencies for Desktop builds
+#[cfg(not(target_arch = "wasm32"))]
 mod ui;
 
+#[cfg(not(target_arch = "wasm32"))]
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
+#[cfg(not(target_arch = "wasm32"))]
 use ratatui::{backend::CrosstermBackend, Terminal};
+#[cfg(not(target_arch = "wasm32"))]
 use std::io;
+#[cfg(not(target_arch = "wasm32"))]
 use ui::App;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -30,14 +38,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// Main function stub for Wasm builds to avoid linker errors
+#[cfg(target_arch = "wasm32")]
+fn main() {}
+
+#[cfg(not(target_arch = "wasm32"))]
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
     let mut app = App::new();
 
     loop {
         terminal.draw(|f| ui::draw(f, &app))?;
 
-        // CRITICAL: only process key *presses*, not releases/repeats.
-        // On Windows, crossterm fires Press + Release for every keystroke.
         if let Event::Key(key) = event::read()? {
             if key.kind != KeyEventKind::Press { continue; }
 

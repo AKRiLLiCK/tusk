@@ -6,8 +6,6 @@ use crate::engine::{RuleType, Transform, Transformation};
 pub struct PhaseZeroSimplifier;
 pub struct SumRule;
 
-pub struct SumRule;
-
 impl Transform for SumRule {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
         let Expr::Integral { integrand, variable } = expr else { return None; };
