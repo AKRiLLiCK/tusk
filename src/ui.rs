@@ -2,6 +2,7 @@ use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph},
     Frame,
 };
@@ -21,6 +22,30 @@ impl App {
     }
 }
 
+pub const COMMANDS: &[&str] = &["int(", "sin(", "cos(", "exp(", "ln("];
+
+pub fn get_suggestion(input: &str) -> Option<&'static str> {
+    if input.is_empty() {
+        return None;
+    }
+    
+    // Find the last alphabetic word being typed
+    let rev_word: String = input.chars().rev().take_while(|c| c.is_alphabetic()).collect();
+    let word: String = rev_word.chars().rev().collect();
+    
+    if word.is_empty() {
+        return None;
+    }
+
+    for &cmd in COMMANDS {
+        if cmd.starts_with(&word) && cmd != word {
+            let suffix = &cmd[word.len()..];
+            return Some(suffix);
+        }
+    }
+    None
+}
+
 pub fn draw(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -34,9 +59,14 @@ pub fn draw(f: &mut Frame, app: &mut App) {
         )
         .split(f.area());
 
-    let input_display = Paragraph::new(app.input.as_str())
-        .style(Style::default().fg(Color::Yellow))
-        .block(Block::default().borders(Borders::ALL).title(" Tusk Input (.tk) "));
+    let suggestion = get_suggestion(&app.input).unwrap_or("");
+    let input_line = Line::from(vec![
+        Span::styled(app.input.as_str(), Style::default().fg(Color::Yellow)),
+        Span::styled(suggestion, Style::default().fg(Color::DarkGray)),
+    ]);
+
+    let input_display = Paragraph::new(input_line)
+        .block(Block::default().borders(Borders::ALL).title(" Tusk Input (.tk) [Press Tab to Autocomplete] "));
 
     f.render_widget(input_display, chunks[0]);
 

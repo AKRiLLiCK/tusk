@@ -71,6 +71,18 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
                         app.engine = None;
                     }
                 }
+                KeyCode::Tab | KeyCode::Right => {
+                    if let Some(suggestion) = ui::get_suggestion(&app.input) {
+                        app.input.push_str(suggestion);
+                        if let Ok(expr) = ast::Expr::parse(&app.input) {
+                            let mut engine = engine::TuskEngine::new(expr);
+                            engine.run();
+                            app.engine = Some(engine);
+                        } else {
+                            app.engine = None;
+                        }
+                    }
+                }
                 KeyCode::Esc => {
                     return Ok(());
                 }
