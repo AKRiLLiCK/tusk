@@ -117,3 +117,36 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_derivative_var() {
+        let e = Expr::Var("x".to_string());
+        let d = derive(&e, "x");
+        assert_eq!(d, Expr::Const(1.0));
+    }
+
+    #[test]
+    fn test_derivative_const() {
+        let e = Expr::Const(5.0);
+        let d = derive(&e, "x");
+        assert_eq!(d, Expr::Const(0.0));
+    }
+
+    #[test]
+    fn test_derivative_sin() {
+        let e = Expr::Sin(Box::new(Expr::Var("x".to_string())));
+        let d = derive(&e, "x");
+        // cos(x) * 1
+        assert_eq!(
+            d,
+            Expr::Mul(
+                Box::new(Expr::Cos(Box::new(Expr::Var("x".to_string())))),
+                Box::new(Expr::Const(1.0))
+            )
+        );
+    }
+}
