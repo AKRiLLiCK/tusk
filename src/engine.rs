@@ -47,6 +47,19 @@ impl TuskEngine {
 
     /// Run the engine until no more transformations can be applied or an integral is solved.
     pub fn run(&mut self) {
-        // TODO: Iterate over Transforms, apply them, and store Steps.
+        use crate::heuristics::PhaseZeroSimplifier;
+        let simplifier = PhaseZeroSimplifier;
+
+        loop {
+            if let Some(trans) = simplifier.apply(&self.current_expr) {
+                self.steps.push(Step {
+                    initial_state: self.current_expr.clone(),
+                    transformation: trans.clone(),
+                });
+                self.current_expr = trans.new_state;
+                continue;
+            }
+            break;
+        }
     }
 }

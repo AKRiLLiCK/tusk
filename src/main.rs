@@ -1,5 +1,6 @@
 mod ast;
 mod engine;
+mod heuristics;
 mod ui;
 
 use anyhow::Result;
@@ -52,7 +53,9 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
                     app.input.push(c);
                     // Try parsing
                     if let Ok(expr) = ast::Expr::parse(&app.input) {
-                        app.engine = Some(engine::TuskEngine::new(expr));
+                        let mut engine = engine::TuskEngine::new(expr);
+                        engine.run();
+                        app.engine = Some(engine);
                     } else {
                         app.engine = None;
                     }
@@ -61,7 +64,9 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut
                     app.input.pop();
                     // Try parsing
                     if let Ok(expr) = ast::Expr::parse(&app.input) {
-                        app.engine = Some(engine::TuskEngine::new(expr));
+                        let mut engine = engine::TuskEngine::new(expr);
+                        engine.run();
+                        app.engine = Some(engine);
                     } else {
                         app.engine = None;
                     }
