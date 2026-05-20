@@ -1,25 +1,25 @@
 use crate::ast::Expr;
 
-/// Categorizes the type of rule applied for UI categorization and coloring.
+/// Categorizes the type of rule applied for UI display and coloring.
 #[derive(Debug, Clone, PartialEq)]
+#[allow(dead_code)]
 pub enum RuleType {
     PhaseZero(String),
     Substitution { u: Expr, du: Expr },
-    IntegrationByParts { u: Expr, dv: Expr, rule_used: String },
-    PartialFractions,
+    IntegrationByParts { u: Expr, dv: Expr },
     HermiteReduction,
-    Simplification,
 }
 
-/// Represents a single mutation of the AST.
+/// A single mutation of the AST with metadata.
 #[derive(Debug, Clone)]
 pub struct Transformation {
     pub new_state: Expr,
     pub description: String,
+    #[allow(dead_code)]
     pub rule: RuleType,
 }
 
-/// Represents a complete step in the UI, capturing both the before and after state.
+/// A complete step: the state before + the transformation applied.
 #[derive(Debug, Clone)]
 pub struct Step {
     pub initial_state: Expr,
@@ -31,7 +31,7 @@ pub trait Transform {
     fn apply(&self, expr: &Expr) -> Option<Transformation>;
 }
 
-/// Orchestrates the integration process.
+/// Orchestrates the integration pipeline.
 pub struct TuskEngine {
     pub steps: Vec<Step>,
     pub current_expr: Expr,
@@ -39,38 +39,32 @@ pub struct TuskEngine {
 
 impl TuskEngine {
     pub fn new(initial_expr: Expr) -> Self {
-        Self {
-            steps: Vec::new(),
-            current_expr: initial_expr,
-        }
+        Self { steps: Vec::new(), current_expr: initial_expr }
     }
 
-    /// Run the engine until no more transformations can be applied or an integral is solved.
+    /// Run all rules in priority order until fixpoint.
     pub fn run(&mut self) {
-        use crate::heuristics::{PhaseZeroSimplifier, AlpesIBP, Substitution};
+        use crate::heuristics::{AlpesIBP, PhaseZeroSimplifier, Substitution};
         use crate::risch::RationalHermiteReduction;
-        let p0 = PhaseZeroSimplifier;
-        let alpes = AlpesIBP;
-        let sub = Substitution;
-        let hermite = RationalHermiteReduction;
 
-        let rules: Vec<&dyn Transform> = vec![&p0, &sub, &alpes, &hermite];
+        let rules: Vec<&dyn Transform> = vec![
+            &PhaseZeroSimplifier,
+            &Substitution,
+            &AlpesIBP,
+            &RationalHermiteReduction,
+        ];
 
         loop {
-            let mut applied = false;
-            for rule in &rules {
-                if let Some(trans) = rule.apply(&self.current_expr) {
+            let found = rules.iter().find_map(|r| r.apply(&self.current_expr));
+            match found {
+                Some(trans) => {
                     self.steps.push(Step {
                         initial_state: self.current_expr.clone(),
                         transformation: trans.clone(),
                     });
                     self.current_expr = trans.new_state;
-                    applied = true;
-                    break; // Start over from first rule
                 }
-            }
-            if !applied {
-                break;
+                None => break,
             }
         }
     }

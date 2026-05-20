@@ -1,181 +1,128 @@
 use crate::ast::Expr;
 use crate::engine::{RuleType, Transform, Transformation};
 
+// ── Phase Zero: algebraic identities ────────────────────────────────
+
 pub struct PhaseZeroSimplifier;
 
 impl Transform for PhaseZeroSimplifier {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
-        simplify(expr).map(|new_expr| Transformation {
-            new_state: new_expr,
-            description: "Phase Zero: Algebraic Simplification".to_string(),
-            rule: RuleType::PhaseZero("Algebraic Simplification".to_string()),
+        simplify(expr).map(|new| Transformation {
+            new_state: new,
+            description: "Phase Zero: Algebraic Simplification".into(),
+            rule: RuleType::PhaseZero("simplify".into()),
         })
     }
 }
 
 fn simplify(expr: &Expr) -> Option<Expr> {
     match expr {
-        Expr::Add(left, right) => {
-            if let Some(simp_l) = simplify(left) {
-                return Some(Expr::Add(Box::new(simp_l), right.clone()));
+        Expr::Add(l, r) => {
+            if let Some(s) = simplify(l) { return Some(Expr::Add(Box::new(s), r.clone())); }
+            if let Some(s) = simplify(r) { return Some(Expr::Add(l.clone(), Box::new(s))); }
+            match (&**l, &**r) {
+                (Expr::Const(a), Expr::Const(b)) => Some(Expr::Const(a + b)),
+                (Expr::Const(c), _) if *c == 0.0 => Some(*r.clone()),
+                (_, Expr::Const(c)) if *c == 0.0 => Some(*l.clone()),
+                _ => None,
             }
-            if let Some(simp_r) = simplify(right) {
-                return Some(Expr::Add(left.clone(), Box::new(simp_r)));
-            }
-            
-            // Constant folding
-            if let (Expr::Const(l), Expr::Const(r)) = (&**left, &**right) {
-                return Some(Expr::Const(l + r));
-            }
-            // x + 0 = x
-            if let Expr::Const(0.0) = **left {
-                return Some(*right.clone());
-            }
-            if let Expr::Const(0.0) = **right {
-                return Some(*left.clone());
-            }
-            None
         }
-        Expr::Mul(left, right) => {
-            if let Some(simp_l) = simplify(left) {
-                return Some(Expr::Mul(Box::new(simp_l), right.clone()));
+        Expr::Mul(l, r) => {
+            if let Some(s) = simplify(l) { return Some(Expr::Mul(Box::new(s), r.clone())); }
+            if let Some(s) = simplify(r) { return Some(Expr::Mul(l.clone(), Box::new(s))); }
+            match (&**l, &**r) {
+                (Expr::Const(a), Expr::Const(b)) => Some(Expr::Const(a * b)),
+                (Expr::Const(c), _) | (_, Expr::Const(c)) if *c == 0.0 => Some(Expr::Const(0.0)),
+                (Expr::Const(c), _) if *c == 1.0 => Some(*r.clone()),
+                (_, Expr::Const(c)) if *c == 1.0 => Some(*l.clone()),
+                _ => None,
             }
-            if let Some(simp_r) = simplify(right) {
-                return Some(Expr::Mul(left.clone(), Box::new(simp_r)));
-            }
-
-            // Constant folding
-            if let (Expr::Const(l), Expr::Const(r)) = (&**left, &**right) {
-                return Some(Expr::Const(l * r));
-            }
-            // x * 0 = 0
-            if let Expr::Const(0.0) = **left {
-                return Some(Expr::Const(0.0));
-            }
-            if let Expr::Const(0.0) = **right {
-                return Some(Expr::Const(0.0));
-            }
-            // x * 1 = x
-            if let Expr::Const(1.0) = **left {
-                return Some(*right.clone());
-            }
-            if let Expr::Const(1.0) = **right {
-                return Some(*left.clone());
-            }
-            None
         }
         Expr::Integral { integrand, variable } => {
-            if let Some(simp) = simplify(integrand) {
-                return Some(Expr::Integral {
-                    integrand: Box::new(simp),
-                    variable: variable.clone(),
-                });
-            }
-            None
+            simplify(integrand).map(|s| Expr::Integral {
+                integrand: Box::new(s),
+                variable: variable.clone(),
+            })
         }
         Expr::Sin(inner) => {
-            if let Some(simp) = simplify(inner) {
-                return Some(Expr::Sin(Box::new(simp)));
-            }
-            if let Expr::Const(0.0) = **inner {
-                return Some(Expr::Const(0.0));
-            }
+            if let Some(s) = simplify(inner) { return Some(Expr::Sin(Box::new(s))); }
+            if matches!(**inner, Expr::Const(c) if c == 0.0) { return Some(Expr::Const(0.0)); }
             None
         }
         Expr::Cos(inner) => {
-            if let Some(simp) = simplify(inner) {
-                return Some(Expr::Cos(Box::new(simp)));
-            }
-            if let Expr::Const(0.0) = **inner {
-                return Some(Expr::Const(1.0));
-            }
+            if let Some(s) = simplify(inner) { return Some(Expr::Cos(Box::new(s))); }
+            if matches!(**inner, Expr::Const(c) if c == 0.0) { return Some(Expr::Const(1.0)); }
             None
         }
         Expr::Pow(base, exp) => {
-            if let Some(simp) = simplify(base) {
-                return Some(Expr::Pow(Box::new(simp), exp.clone()));
+            if let Some(s) = simplify(base) { return Some(Expr::Pow(Box::new(s), exp.clone())); }
+            if let Some(s) = simplify(exp)  { return Some(Expr::Pow(base.clone(), Box::new(s))); }
+            match &**exp {
+                Expr::Const(c) if *c == 0.0 => Some(Expr::Const(1.0)),
+                Expr::Const(c) if *c == 1.0 => Some(*base.clone()),
+                _ => None,
             }
-            if let Some(simp) = simplify(exp) {
-                return Some(Expr::Pow(base.clone(), Box::new(simp)));
-            }
-            if let Expr::Const(0.0) = **exp {
-                return Some(Expr::Const(1.0));
-            }
-            if let Expr::Const(1.0) = **exp {
-                return Some(*base.clone());
-            }
-            None
         }
         _ => None,
     }
 }
 
+// ── ALPES: Integration by Parts ─────────────────────────────────────
+
 pub struct AlpesIBP;
 
 fn alpes_score(expr: &Expr) -> i32 {
     match expr {
-        Expr::Ln(_) => 4,
-        Expr::Var(_) | Expr::Pow(..) => 3,
-        Expr::Exp(_) => 2,
-        Expr::Sin(_) | Expr::Cos(_) => 1,
-        _ => 0,
+        Expr::Ln(_)                    => 4, // L
+        Expr::Var(_) | Expr::Pow(..)   => 3, // A (algebraic)
+        Expr::Exp(_)                   => 2, // E
+        Expr::Sin(_) | Expr::Cos(_)    => 1, // S
+        _                              => 0,
     }
 }
 
 impl Transform for AlpesIBP {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
-        if let Expr::Integral { integrand, variable } = expr {
-            if let Expr::Mul(left, right) = &**integrand {
-                let score_l = alpes_score(left);
-                let score_r = alpes_score(right);
-                
-                let (u, dv) = if score_l >= score_r {
-                    (left.clone(), right.clone())
-                } else {
-                    (right.clone(), left.clone())
-                };
-                
-                // Attempt to integrate dv
-                if let Some(v) = crate::calculus::simple_integrate(&dv, variable) {
-                    let du = crate::calculus::derive(&u, variable);
-                    
-                    // u * v - int(v * du)
-                    let new_integrand = Expr::Mul(Box::new(v.clone()), Box::new(du.clone()));
-                    let new_expr = Expr::Sub(
-                        Box::new(Expr::Mul(u.clone(), Box::new(v))),
-                        Box::new(Expr::Integral {
-                            integrand: Box::new(new_integrand),
-                            variable: variable.clone(),
-                        }),
-                    );
-                    
-                    return Some(Transformation {
-                        new_state: new_expr,
-                        description: "ALPES: Integration by Parts".to_string(),
-                        rule: RuleType::IntegrationByParts { u: *u, dv: *dv, rule_used: "ALPES".to_string() }
-                    });
-                }
-            }
-        }
-        None
+        let Expr::Integral { integrand, variable } = expr else { return None; };
+        let Expr::Mul(left, right) = &**integrand else { return None; };
+
+        let (u, dv) = if alpes_score(left) >= alpes_score(right) {
+            (left, right)
+        } else {
+            (right, left)
+        };
+
+        let v = crate::calculus::simple_integrate(dv, variable)?;
+        let du = crate::calculus::derive(u, variable);
+
+        // u·v − ∫ v·du dx
+        let new_expr = Expr::Sub(
+            Box::new(Expr::Mul(u.clone(), Box::new(v.clone()))),
+            Box::new(Expr::Integral {
+                integrand: Box::new(Expr::Mul(Box::new(v), Box::new(du))),
+                variable: variable.clone(),
+            }),
+        );
+
+        Some(Transformation {
+            new_state: new_expr,
+            description: "ALPES: Integration by Parts".into(),
+            rule: RuleType::IntegrationByParts { u: *u.clone(), dv: *dv.clone() },
+        })
     }
 }
+
+// ── Substitution (heuristic entry point) ────────────────────────────
 
 pub struct Substitution;
 
 impl Transform for Substitution {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
-        // A robust u-substitution engine requires complex algebraic matching to find g(x) and g'(x).
-        // Here we demonstrate the heuristic entry point.
-        if let Expr::Integral { integrand, variable } = expr {
-            if let Expr::Mul(left, right) = &**integrand {
-                // If the user inputs something that clearly triggers a substitution, we would catch it here.
-                // For demonstration, we'll return None unless we specifically build out full sub-matching.
-                let _left_derivative = crate::calculus::derive(left, variable);
-                let _right_derivative = crate::calculus::derive(right, variable);
-                // In a full AST, we would check if `left` is `f(right)` and `left_derivative` == `right`.
-            }
-        }
+        // Stub: full u-substitution matching requires expression unification.
+        // The entry point is wired into the pipeline for future expansion.
+        let Expr::Integral { integrand, variable } = expr else { return None; };
+        let Expr::Mul(left, right) = &**integrand else { return None; };
+        let _ = (crate::calculus::derive(left, variable), crate::calculus::derive(right, variable));
         None
     }
 }

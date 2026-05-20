@@ -5,104 +5,69 @@ mod heuristics;
 mod risch;
 mod ui;
 
-use anyhow::Result;
 use crossterm::{
-    event::{self, Event, KeyCode},
+    event::{self, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::{Backend, CrosstermBackend},
-    Terminal,
-};
-use std::{error::Error, io};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io;
 use ui::App;
 
-fn main() -> Result<(), Box<dyn Error>> {
-    // setup terminal
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen)?;
-    let backend = CrosstermBackend::new(stdout);
-    let mut terminal = Terminal::new(backend)?;
+    let mut terminal = Terminal::new(CrosstermBackend::new(stdout))?;
 
-    // create app and run it
-    let mut app = App::new();
-    let res = run_app(&mut terminal, &mut app);
+    let res = run(&mut terminal);
 
-    // restore terminal
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen,
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
-    if let Err(err) = res {
-        println!("{:?}", err)
-    }
-
+    if let Err(e) = res { eprintln!("{e:?}"); }
     Ok(())
 }
 
-fn run_app(terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>, app: &mut App) -> io::Result<()> {
-    loop {
-        terminal.draw(|f| ui::draw(f, app))?;
+fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
+    let mut app = App::new();
 
+    loop {
+        terminal.draw(|f| ui::draw(f, &app))?;
+
+        // CRITICAL: only process key *presses*, not releases/repeats.
+        // On Windows, crossterm fires Press + Release for every keystroke.
         if let Event::Key(key) = event::read()? {
+            if key.kind != KeyEventKind::Press { continue; }
+
             match key.code {
                 KeyCode::Char(c) => {
                     app.input.push(c);
-                    if let Ok(expr) = ast::Expr::parse(&app.input) {
-                        let mut engine = engine::TuskEngine::new(expr);
-                        engine.run();
-                        app.selected_step = engine.steps.len();
-                        app.engine = Some(engine);
-                    } else {
-                        app.engine = None;
-                    }
+                    app.reparse();
                 }
                 KeyCode::Backspace => {
                     app.input.pop();
-                    if let Ok(expr) = ast::Expr::parse(&app.input) {
-                        let mut engine = engine::TuskEngine::new(expr);
-                        engine.run();
-                        app.selected_step = engine.steps.len();
-                        app.engine = Some(engine);
-                    } else {
-                        app.engine = None;
-                    }
+                    app.reparse();
                 }
-                KeyCode::Tab | KeyCode::Right => {
-                    if let Some(suggestion) = ui::get_suggestion(&app.input) {
-                        app.input.push_str(suggestion);
-                        if let Ok(expr) = ast::Expr::parse(&app.input) {
-                            let mut engine = engine::TuskEngine::new(expr);
-                            engine.run();
-                            app.selected_step = engine.steps.len();
-                            app.engine = Some(engine);
-                        } else {
-                            app.engine = None;
-                        }
+                KeyCode::Tab => {
+                    if let Some(suffix) = ui::get_suggestion(&app.input) {
+                        app.input.push_str(suffix);
+                        app.reparse();
                     }
                 }
                 KeyCode::Up => {
-                    if let Some(engine) = &app.engine {
-                        if app.selected_step > 0 {
-                            app.selected_step -= 1;
-                        }
+                    if app.selected_step > 0 {
+                        app.selected_step -= 1;
                     }
                 }
                 KeyCode::Down => {
-                    if let Some(engine) = &app.engine {
-                        if app.selected_step < engine.steps.len() {
-                            app.selected_step += 1;
-                        }
+                    let max = app.engine.as_ref().map_or(0, |e| e.steps.len());
+                    if app.selected_step < max {
+                        app.selected_step += 1;
                     }
                 }
-                KeyCode::Esc => {
-                    return Ok(());
-                }
+                KeyCode::Esc => return Ok(()),
                 _ => {}
             }
         }

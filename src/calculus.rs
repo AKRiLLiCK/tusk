@@ -1,114 +1,82 @@
 use crate::ast::Expr;
 
+/// Symbolic differentiation via recursive descent on the AST.
 pub fn derive(expr: &Expr, var: &str) -> Expr {
     match expr {
-        Expr::Var(v) => {
-            if v == var {
-                Expr::Const(1.0)
-            } else {
-                Expr::Const(0.0)
-            }
-        }
-        Expr::Const(_) => Expr::Const(0.0),
+        Expr::Var(v) if v == var => Expr::Const(1.0),
+        Expr::Var(_) | Expr::Const(_) => Expr::Const(0.0),
+
         Expr::Add(l, r) => Expr::Add(Box::new(derive(l, var)), Box::new(derive(r, var))),
         Expr::Sub(l, r) => Expr::Sub(Box::new(derive(l, var)), Box::new(derive(r, var))),
-        Expr::Mul(l, r) => {
-            // Product rule: l'r + lr'
-            let l_prime = derive(l, var);
-            let r_prime = derive(r, var);
-            Expr::Add(
-                Box::new(Expr::Mul(Box::new(l_prime), r.clone())),
-                Box::new(Expr::Mul(l.clone(), Box::new(r_prime))),
-            )
-        }
-        Expr::Sin(inner) => {
-            // Chain rule: cos(inner) * inner'
-            Expr::Mul(
-                Box::new(Expr::Cos(inner.clone())),
-                Box::new(derive(inner, var)),
-            )
-        }
-        Expr::Cos(inner) => {
-            // Chain rule: -sin(inner) * inner'
-            Expr::Mul(
-                Box::new(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Sin(inner.clone())))),
-                Box::new(derive(inner, var)),
-            )
-        }
-        Expr::Exp(inner) => {
-            // Chain rule: exp(inner) * inner'
-            Expr::Mul(
-                Box::new(Expr::Exp(inner.clone())),
-                Box::new(derive(inner, var)),
-            )
-        }
-        Expr::Ln(inner) => {
-            // Chain rule: (1/inner) * inner'
-            Expr::Mul(
-                Box::new(Expr::Div(Box::new(Expr::Const(1.0)), inner.clone())),
-                Box::new(derive(inner, var)),
-            )
-        }
+
+        // Product rule: (lr)' = l'r + lr'
+        Expr::Mul(l, r) => Expr::Add(
+            Box::new(Expr::Mul(Box::new(derive(l, var)), r.clone())),
+            Box::new(Expr::Mul(l.clone(), Box::new(derive(r, var)))),
+        ),
+
+        // Chain rule variants
+        Expr::Sin(i) => Expr::Mul(Box::new(Expr::Cos(i.clone())), Box::new(derive(i, var))),
+        Expr::Cos(i) => Expr::Mul(
+            Box::new(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Sin(i.clone())))),
+            Box::new(derive(i, var)),
+        ),
+        Expr::Exp(i) => Expr::Mul(Box::new(Expr::Exp(i.clone())), Box::new(derive(i, var))),
+        Expr::Ln(i)  => Expr::Mul(
+            Box::new(Expr::Div(Box::new(Expr::Const(1.0)), i.clone())),
+            Box::new(derive(i, var)),
+        ),
+
+        // Power rule (constant exponent only)
         Expr::Pow(base, exp) => {
-            // Very simplified: assuming exp is Const for now. (Power rule)
             if let Expr::Const(n) = **exp {
                 Expr::Mul(
-                    Box::new(Expr::Mul(Box::new(Expr::Const(n)), Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(n - 1.0)))))),
+                    Box::new(Expr::Mul(
+                        Box::new(Expr::Const(n)),
+                        Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(n - 1.0)))),
+                    )),
                     Box::new(derive(base, var)),
                 )
             } else {
-                // Not supported yet
-                Expr::Const(0.0)
+                Expr::Const(0.0) // general case not yet supported
             }
         }
+
         _ => Expr::Const(0.0),
     }
 }
 
+/// Direct-lookup integration for elementary forms.
 pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
     match expr {
-        Expr::Const(c) => Some(Expr::Mul(Box::new(Expr::Const(*c)), Box::new(Expr::Var(var.to_string())))),
-        Expr::Var(v) => {
-            if v == var {
-                Some(Expr::Mul(
-                    Box::new(Expr::Const(0.5)),
-                    Box::new(Expr::Pow(Box::new(Expr::Var(var.to_string())), Box::new(Expr::Const(2.0)))),
-                ))
-            } else {
-                Some(Expr::Mul(Box::new(Expr::Var(v.to_string())), Box::new(Expr::Var(var.to_string()))))
-            }
+        Expr::Const(c) => Some(Expr::Mul(
+            Box::new(Expr::Const(*c)),
+            Box::new(Expr::Var(var.into())),
+        )),
+        Expr::Var(v) if v == var => Some(Expr::Mul(
+            Box::new(Expr::Const(0.5)),
+            Box::new(Expr::Pow(Box::new(Expr::Var(var.into())), Box::new(Expr::Const(2.0)))),
+        )),
+        Expr::Var(v) => Some(Expr::Mul(
+            Box::new(Expr::Var(v.clone())),
+            Box::new(Expr::Var(var.into())),
+        )),
+        Expr::Sin(i) if matches!(&**i, Expr::Var(v) if v == var) => {
+            Some(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Cos(i.clone()))))
         }
-        Expr::Sin(inner) => {
-            if let Expr::Var(v) = &**inner {
-                if v == var {
-                    return Some(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Cos(inner.clone()))));
-                }
-            }
-            None
+        Expr::Cos(i) if matches!(&**i, Expr::Var(v) if v == var) => {
+            Some(Expr::Sin(i.clone()))
         }
-        Expr::Cos(inner) => {
-            if let Expr::Var(v) = &**inner {
-                if v == var {
-                    return Some(Expr::Sin(inner.clone()));
-                }
-            }
-            None
-        }
-        Expr::Exp(inner) => {
-            if let Expr::Var(v) = &**inner {
-                if v == var {
-                    return Some(Expr::Exp(inner.clone()));
-                }
-            }
-            None
+        Expr::Exp(i) if matches!(&**i, Expr::Var(v) if v == var) => {
+            Some(Expr::Exp(i.clone()))
         }
         Expr::Pow(base, exp) => {
             if let (Expr::Var(v), Expr::Const(n)) = (&**base, &**exp) {
                 if v == var && *n != -1.0 {
-                    let new_n = n + 1.0;
+                    let m = n + 1.0;
                     return Some(Expr::Mul(
-                        Box::new(Expr::Const(1.0 / new_n)),
-                        Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(new_n)))),
+                        Box::new(Expr::Const(1.0 / m)),
+                        Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(m)))),
                     ));
                 }
             }
@@ -123,28 +91,22 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_derivative_var() {
-        let e = Expr::Var("x".to_string());
-        let d = derive(&e, "x");
-        assert_eq!(d, Expr::Const(1.0));
+    fn derivative_of_var() {
+        assert_eq!(derive(&Expr::Var("x".into()), "x"), Expr::Const(1.0));
     }
 
     #[test]
-    fn test_derivative_const() {
-        let e = Expr::Const(5.0);
-        let d = derive(&e, "x");
-        assert_eq!(d, Expr::Const(0.0));
+    fn derivative_of_const() {
+        assert_eq!(derive(&Expr::Const(5.0), "x"), Expr::Const(0.0));
     }
 
     #[test]
-    fn test_derivative_sin() {
-        let e = Expr::Sin(Box::new(Expr::Var("x".to_string())));
-        let d = derive(&e, "x");
-        // cos(x) * 1
+    fn derivative_of_sin() {
+        let e = Expr::Sin(Box::new(Expr::Var("x".into())));
         assert_eq!(
-            d,
+            derive(&e, "x"),
             Expr::Mul(
-                Box::new(Expr::Cos(Box::new(Expr::Var("x".to_string())))),
+                Box::new(Expr::Cos(Box::new(Expr::Var("x".into())))),
                 Box::new(Expr::Const(1.0))
             )
         );
