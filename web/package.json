@@ -1,0 +1,15 @@
+{
+  "name": "tusk-web",
+  "type": "module",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run copy-wasm && astro dev",
+    "build": "npm run copy-wasm && astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "copy-wasm": "mkdir -p public/pkg && cp -r ../pkg/* public/pkg/"
+  },
+  "dependencies": {
+    "astro": "^6.1.8"
+  }
+}
