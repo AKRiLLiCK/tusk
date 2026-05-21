@@ -67,7 +67,7 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
             Box::new(Expr::Var(var.to_string())),
         )),
         Expr::Var(v) if v == var => Some(Expr::Mul(
-            Box::new(Expr::Const(0.5)),
+            Box::new(Expr::Div(Box::new(Expr::Const(1.0)), Box::new(Expr::Const(2.0)))),
             Box::new(Expr::Pow(Box::new(Expr::Var(var.into())), Box::new(Expr::Const(2.0)))),
         )),
         Expr::Var(v) => Some(Expr::Mul(
@@ -91,7 +91,7 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
                 if v == var && *n != -1.0 {
                     let m = n + 1.0;
                     return Some(Expr::Mul(
-                        Box::new(Expr::Const(1.0 / m)),
+                        Box::new(Expr::Div(Box::new(Expr::Const(1.0)), Box::new(Expr::Const(m)))),
                         Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(m)))),
                     ));
                 }

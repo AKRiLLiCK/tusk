@@ -118,7 +118,7 @@ fn simplify(expr: &Expr) -> Option<Expr> {
             if let Some(s) = simplify(l) { return Some(Expr::Div(Box::new(s), r.clone())); }
             if let Some(s) = simplify(r) { return Some(Expr::Div(l.clone(), Box::new(s))); }
             match (&**l, &**r) {
-                (Expr::Const(a), Expr::Const(b)) if *b != 0.0 => Some(Expr::Const(a / b)),
+                (Expr::Const(a), Expr::Const(b)) if *b != 0.0 && (a / b) == ((a / b) as i64) as f64 => Some(Expr::Const(a / b)),
                 (Expr::Const(c), _) if *c == 0.0 => Some(Expr::Const(0.0)),
                 (_, Expr::Const(c)) if *c == 1.0 => Some(*l.clone()),
                 (l_expr, r_expr) if l_expr == r_expr => Some(Expr::Const(1.0)),
@@ -239,7 +239,7 @@ impl Transform for Substitution {
                 if let Expr::Const(cv) = **c {
                     if **u_part == **num {
                         return Some(Transformation {
-                            new_state: Expr::Mul(Box::new(Expr::Const(1.0 / cv)), Box::new(Expr::Ln(den.clone()))),
+                            new_state: Expr::Mul(Box::new(Expr::Div(Box::new(Expr::Const(1.0)), Box::new(Expr::Const(cv)))), Box::new(Expr::Ln(den.clone()))),
                             description: "Substitution: f'(x)/(c*f(x)) -> (1/c)*ln(f(x))".into(),
                             rule: RuleType::Substitution { u: *den.clone(), du: sim_du.clone() },
                         });
