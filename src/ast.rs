@@ -10,6 +10,38 @@ use nom::{
     Parser,
 };
 
+fn float_to_frac(val: f64) -> Option<(i64, i64)> {
+    if val.is_nan() || val.is_infinite() { return None; }
+    let sign = if val < 0.0 { -1 } else { 1 };
+    let val = val.abs();
+    
+    let mut h1: i64 = 1;
+    let mut h2: i64 = 0;
+    let mut k1: i64 = 0;
+    let mut k2: i64 = 1;
+    let mut b = val;
+    
+    for _ in 0..20 {
+        let a = b.floor() as i64;
+        let h = a.checked_mul(h1)?.checked_add(h2)?;
+        let k = a.checked_mul(k1)?.checked_add(k2)?;
+        h2 = h1; h1 = h;
+        k2 = k1; k1 = k;
+        
+        if k > 10000 { break; } // limit denominator size
+        
+        let diff = val - (h as f64 / k as f64);
+        if diff.abs() < 1e-9 {
+            if k == 1 { return None; } // It's an integer, handled elsewhere
+            return Some((h * sign, k));
+        }
+        if b - a as f64 == 0.0 { break; }
+        b = 1.0 / (b - a as f64);
+    }
+    None
+}
+
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Var(String),
@@ -38,12 +70,32 @@ impl Expr {
         match self {
             Self::Var(v) => v.clone(),
             Self::Const(c) => {
-                if *c == (*c as i64) as f64 { format!("{}", *c as i64) } 
-                else { format!("{c}") }
+                if *c == (*c as i64) as f64 { 
+                    format!("{}", *c as i64) 
+                } else if let Some((num, den)) = float_to_frac(*c) {
+                    format!("\\frac{{{}}}{{{}}}", num, den)
+                } else { 
+                    format!("{c}") 
+                }
             }
             Self::Add(l, r) => format!("{} + {}", l.to_latex(), r.to_latex()),
             Self::Sub(l, r) => format!("{} - {}", l.to_latex(), r.to_latex()),
             Self::Mul(l, r) => {
+                if let Self::Const(c) = **l {
+                    if let Some((num, den)) = float_to_frac(c) {
+                        let r_str = match **r {
+                            Self::Add(..) | Self::Sub(..) => format!("\\left({}\\right)", r.to_latex()),
+                            _ => r.to_latex(),
+                        };
+                        if num == 1 {
+                            return format!("\\frac{{{}}}{{{}}}", r_str, den);
+                        } else if num == -1 {
+                            return format!("-\\frac{{{}}}{{{}}}", r_str, den);
+                        } else {
+                            return format!("\\frac{{{} \\cdot {}}}{{{}}}", num, r_str, den);
+                        }
+                    }
+                }
                 let l_str = match **l {
                     Self::Add(..) | Self::Sub(..) => format!("\\left({}\\right)", l.to_latex()),
                     _ => l.to_latex(),
@@ -79,8 +131,13 @@ impl std::fmt::Display for Expr {
         match self {
             Self::Var(v) => write!(f, "{v}"),
             Self::Const(c) => {
-                if *c == (*c as i64) as f64 { write!(f, "{}", *c as i64) } 
-                else { write!(f, "{c}") }
+                if *c == (*c as i64) as f64 { 
+                    write!(f, "{}", *c as i64) 
+                } else if let Some((num, den)) = float_to_frac(*c) {
+                    write!(f, "({} / {})", num, den)
+                } else { 
+                    write!(f, "{c}") 
+                }
             }
             Self::Add(l, r) => write!(f, "({l} + {r})"),
             Self::Sub(l, r) => write!(f, "({l} - {r})"),
