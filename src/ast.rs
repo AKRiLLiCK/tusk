@@ -21,6 +21,7 @@ pub enum Expr {
     Pow(Box<Expr>, Box<Expr>),
     Sin(Box<Expr>),
     Cos(Box<Expr>),
+    Tan(Box<Expr>),
     Exp(Box<Expr>),
     Ln(Box<Expr>),
     Integral { integrand: Box<Expr>, variable: String },
@@ -49,6 +50,7 @@ impl std::fmt::Display for Expr {
             Self::Pow(l, r) => write!(f, "({l}^{r})"),
             Self::Sin(i) => write!(f, "sin({i})"),
             Self::Cos(i) => write!(f, "cos({i})"),
+            Self::Tan(i) => write!(f, "tan({i})"),
             Self::Exp(i) => write!(f, "exp({i})"),
             Self::Ln(i) => write!(f, "ln({i})"),
             Self::Integral { integrand, variable } => {
@@ -106,6 +108,7 @@ fn parse_fn_call(input: &str) -> IResult<&str, Expr, Error<&str>> {
     match name {
         "sin" => Ok((input, Expr::Sin(Box::new(arg)))),
         "cos" => Ok((input, Expr::Cos(Box::new(arg)))),
+        "tan" => Ok((input, Expr::Tan(Box::new(arg)))),
         "exp" => Ok((input, Expr::Exp(Box::new(arg)))),
         "ln"  => Ok((input, Expr::Ln(Box::new(arg)))),
         _ => Err(nom::Err::Failure(Error::new(name, nom::error::ErrorKind::Tag))),

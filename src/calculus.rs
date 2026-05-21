@@ -21,6 +21,10 @@ pub fn derive(expr: &Expr, var: &str) -> Expr {
             Box::new(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Sin(i.clone())))),
             Box::new(derive(i, var)),
         ),
+        Expr::Tan(i) => Expr::Mul(
+            Box::new(Expr::Div(Box::new(Expr::Const(1.0)), Box::new(Expr::Pow(Box::new(Expr::Cos(i.clone())), Box::new(Expr::Const(2.0)))))),
+            Box::new(derive(i, var)),
+        ),
         Expr::Exp(i) => Expr::Mul(Box::new(Expr::Exp(i.clone())), Box::new(derive(i, var))),
         Expr::Ln(i)  => Expr::Mul(
             Box::new(Expr::Div(Box::new(Expr::Const(1.0)), i.clone())),
@@ -41,6 +45,15 @@ pub fn derive(expr: &Expr, var: &str) -> Expr {
                 Expr::Const(0.0) // general case not yet supported
             }
         }
+
+        // Quotient rule: (u/v)' = (u'v - uv') / v^2
+        Expr::Div(u, v) => Expr::Div(
+            Box::new(Expr::Sub(
+                Box::new(Expr::Mul(Box::new(derive(u, var)), v.clone())),
+                Box::new(Expr::Mul(u.clone(), Box::new(derive(v, var)))),
+            )),
+            Box::new(Expr::Pow(v.clone(), Box::new(Expr::Const(2.0)))),
+        ),
 
         _ => Expr::Const(0.0),
     }
@@ -66,6 +79,9 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
         }
         Expr::Cos(i) if matches!(&**i, Expr::Var(v) if v == var) => {
             Some(Expr::Sin(i.clone()))
+        }
+        Expr::Tan(i) if matches!(&**i, Expr::Var(v) if v == var) => {
+            Some(Expr::Mul(Box::new(Expr::Const(-1.0)), Box::new(Expr::Ln(Box::new(Expr::Cos(i.clone()))))))
         }
         Expr::Exp(i) if matches!(&**i, Expr::Var(v) if v == var) => {
             Some(Expr::Exp(i.clone()))

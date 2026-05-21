@@ -103,6 +103,28 @@ fn simplify(expr: &Expr) -> Option<Expr> {
                 _ => None,
             }
         }
+        Expr::Sub(l, r) => {
+            if let Some(s) = simplify(l) { return Some(Expr::Sub(Box::new(s), r.clone())); }
+            if let Some(s) = simplify(r) { return Some(Expr::Sub(l.clone(), Box::new(s))); }
+            match (&**l, &**r) {
+                (Expr::Const(a), Expr::Const(b)) => Some(Expr::Const(a - b)),
+                (_, Expr::Const(c)) if *c == 0.0 => Some(*l.clone()),
+                (Expr::Const(c), _) if *c == 0.0 => Some(Expr::Mul(Box::new(Expr::Const(-1.0)), r.clone())),
+                (l_expr, r_expr) if l_expr == r_expr => Some(Expr::Const(0.0)),
+                _ => None,
+            }
+        }
+        Expr::Div(l, r) => {
+            if let Some(s) = simplify(l) { return Some(Expr::Div(Box::new(s), r.clone())); }
+            if let Some(s) = simplify(r) { return Some(Expr::Div(l.clone(), Box::new(s))); }
+            match (&**l, &**r) {
+                (Expr::Const(a), Expr::Const(b)) if *b != 0.0 => Some(Expr::Const(a / b)),
+                (Expr::Const(c), _) if *c == 0.0 => Some(Expr::Const(0.0)),
+                (_, Expr::Const(c)) if *c == 1.0 => Some(*l.clone()),
+                (l_expr, r_expr) if l_expr == r_expr => Some(Expr::Const(1.0)),
+                _ => None,
+            }
+        }
         Expr::Integral { integrand, variable } => {
             simplify(integrand).map(|s| Expr::Integral {
                 integrand: Box::new(s),
@@ -117,6 +139,11 @@ fn simplify(expr: &Expr) -> Option<Expr> {
         Expr::Cos(inner) => {
             if let Some(s) = simplify(inner) { return Some(Expr::Cos(Box::new(s))); }
             if matches!(**inner, Expr::Const(c) if c == 0.0) { return Some(Expr::Const(1.0)); }
+            None
+        }
+        Expr::Tan(inner) => {
+            if let Some(s) = simplify(inner) { return Some(Expr::Tan(Box::new(s))); }
+            if matches!(**inner, Expr::Const(c) if c == 0.0) { return Some(Expr::Const(0.0)); }
             None
         }
         Expr::Pow(base, exp) => {
@@ -179,6 +206,48 @@ pub struct Substitution;
 impl Transform for Substitution {
     fn apply(&self, expr: &Expr) -> Option<Transformation> {
         let Expr::Integral { integrand, variable } = expr else { return None; };
+        
+        // Handle Div: \int num / den
+        if let Expr::Div(num, den) = &**integrand {
+            let du = crate::calculus::derive(den, variable);
+            let sim_du = simplify(&du).unwrap_or(du.clone());
+            
+            // Very simple constant multiple check: if num == du, it's ln(|den|)
+            if **num == sim_du || **num == du {
+                return Some(Transformation {
+                    new_state: Expr::Ln(den.clone()),
+                    description: "Substitution: f'(x)/f(x) -> ln(f(x))".into(),
+                    rule: RuleType::Substitution { u: *den.clone(), du: sim_du },
+                });
+            }
+            
+            // Check if num is -1 * du (e.g. for sin(x)/cos(x) -> tan(x))
+            if let Expr::Mul(c, u_part) = &**num {
+                if let Expr::Const(cv) = **c {
+                    if **u_part == sim_du || **u_part == du {
+                        return Some(Transformation {
+                            new_state: Expr::Mul(Box::new(Expr::Const(cv)), Box::new(Expr::Ln(den.clone()))),
+                            description: "Substitution: c*f'(x)/f(x) -> c*ln(f(x))".into(),
+                            rule: RuleType::Substitution { u: *den.clone(), du: sim_du },
+                        });
+                    }
+                }
+            }
+            
+            // check if du is -1 * num
+            if let Expr::Mul(c, u_part) = &sim_du {
+                if let Expr::Const(cv) = **c {
+                    if **u_part == **num {
+                        return Some(Transformation {
+                            new_state: Expr::Mul(Box::new(Expr::Const(1.0 / cv)), Box::new(Expr::Ln(den.clone()))),
+                            description: "Substitution: f'(x)/(c*f(x)) -> (1/c)*ln(f(x))".into(),
+                            rule: RuleType::Substitution { u: *den.clone(), du: sim_du.clone() },
+                        });
+                    }
+                }
+            }
+        }
+        
         let Expr::Mul(left, right) = &**integrand else { return None; };
         let _ = (crate::calculus::derive(left, variable), crate::calculus::derive(right, variable));
         None
