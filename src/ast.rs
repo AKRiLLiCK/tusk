@@ -33,6 +33,45 @@ impl Expr {
             .map(|(_, e)| e)
             .map_err(|e| format!("Parse error: {e}"))
     }
+
+    pub fn to_latex(&self) -> String {
+        match self {
+            Self::Var(v) => v.clone(),
+            Self::Const(c) => {
+                if *c == (*c as i64) as f64 { format!("{}", *c as i64) } 
+                else { format!("{c}") }
+            }
+            Self::Add(l, r) => format!("{} + {}", l.to_latex(), r.to_latex()),
+            Self::Sub(l, r) => format!("{} - {}", l.to_latex(), r.to_latex()),
+            Self::Mul(l, r) => {
+                let l_str = match **l {
+                    Self::Add(..) | Self::Sub(..) => format!("\\left({}\\right)", l.to_latex()),
+                    _ => l.to_latex(),
+                };
+                let r_str = match **r {
+                    Self::Add(..) | Self::Sub(..) => format!("\\left({}\\right)", r.to_latex()),
+                    _ => r.to_latex(),
+                };
+                format!("{} \\cdot {}", l_str, r_str)
+            },
+            Self::Div(l, r) => format!("\\frac{{{}}}{{{}}}", l.to_latex(), r.to_latex()),
+            Self::Pow(l, r) => {
+                let l_str = match **l {
+                    Self::Add(..) | Self::Sub(..) | Self::Mul(..) | Self::Div(..) => format!("\\left({}\\right)", l.to_latex()),
+                    _ => l.to_latex(),
+                };
+                format!("{}^{{{}}}", l_str, r.to_latex())
+            },
+            Self::Sin(i) => format!("\\sin\\left({}\\right)", i.to_latex()),
+            Self::Cos(i) => format!("\\cos\\left({}\\right)", i.to_latex()),
+            Self::Tan(i) => format!("\\tan\\left({}\\right)", i.to_latex()),
+            Self::Exp(i) => format!("e^{{{}}}", i.to_latex()),
+            Self::Ln(i) => format!("\\ln\\left({}\\right)", i.to_latex()),
+            Self::Integral { integrand, variable } => {
+                format!("\\int {} \\, d{}", integrand.to_latex(), variable)
+            },
+        }
+    }
 }
 
 impl std::fmt::Display for Expr {
