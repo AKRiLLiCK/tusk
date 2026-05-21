@@ -8,7 +8,7 @@ A high-performance, single-binary Terminal User Interface (TUI) calculus engine 
 <img src="assets/tusk_logo.svg" width="128" height="128" alt="Tusk Logo" />
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-24292e.svg?style=flat-square&logo=github" alt="License: MIT" /></a>
-<img src="https://img.shields.io/badge/Release-Leibniz-9f3fdf.svg?style=flat-square&logo=github" alt="Release: Leibniz" />
+<img src="https://img.shields.io/badge/Release-0.2.0-9f3fdf.svg?style=flat-square&logo=github" alt="Release: 0.2.0" />
 <img src="https://img.shields.io/badge/Language-Rust-b7410e.svg?style=flat-square&logo=rust" alt="Language: Rust" />
 <img src="https://img.shields.io/badge/Platform-WASM-654ff0.svg?style=flat-square&logo=webassembly&logoColor=white" alt="Platform: WASM" />
 <img src="https://img.shields.io/badge/CI-Passing-2ea44f.svg?style=flat-square&logo=githubactions&logoColor=white" alt="CI: Status" />
@@ -18,7 +18,7 @@ A high-performance, single-binary Terminal User Interface (TUI) calculus engine 
 * **Transformation Pipeline:** Avoids in-place mutable evaluation. It computes a persistent sequence of AST states at each iteration, enabling deterministic layout rendering and bi-directional history traversal.
 * **Phase Zero Simplification:** Orchestrates algebraic expansion, fraction splitting, constant folding, and trigonometric identity reductions prior to the evaluation loop.
 * **ALPES Decision Engine:** Implements a strict hierarchical scoring model (Logarithmic, Polynomial, Exponential, Trigonometric) to choose optimal integration strategies like Integration by Parts.
-* **Hermite Reduction Fallback:** Incorporates a mathematically sound algebraic reduction algorithm for exact integration of rational functions when structural heuristics yield no matches.
+* **Reduction Fallback:** Incorporates a mathematically sound algebraic reduction algorithm for exact integration of rational functions when structural heuristics yield no matches.
 * **Time-Travel UI:** A keyboard-driven `ratatui` interface allowing developers and mathematicians to step backward and forward through intermediate syntax trees in real time.
 
 ## <img src="https://api.iconify.design/lucide:git-fork.svg?color=%23b48cff" width="18" height="18" /> Architecture and Pipeline
@@ -36,14 +36,14 @@ The structural flow of an expression follows a linear compilation and reduction 
    ├──> [ Sum Rule Linearity ]    ──> (Linear Separation)
    ├──> [ Basic Integration ]     ──> (Direct Lookup tables)
    ├──> [ Alpes IBP Heuristic ]   ──> (Integration by Parts)
-   └──> [ Hermite Reduction ]     ──> (Rational System Solver)
+   └──> [ Reduction ]             ──> (Rational System Solver)
    │
    └──> [ New AST State Saved ] ──> [ Loop Retries / Terminates ]
 
 ```
 
 > [!IMPORTANT]
-> The Hermite Reduction engine operates exclusively on rational functions. When the ALPES engine runs out of transcendental heuristic matches, fractions of polynomials are routed here to compute the algebraic part of the integral before applying log-part fallbacks.
+> The Reduction engine operates exclusively on rational functions. When the ALPES engine runs out of transcendental heuristic matches, fractions of polynomials are routed here to compute the algebraic part of the integral before applying log-part fallbacks.
 
 ## Tusk Language Syntax (.tk)
 
