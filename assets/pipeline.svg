@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 500" width="100%" height="100%">
+  <defs>
+    <!-- Arrow marker -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#9399b2" />
+    </marker>
+    <marker id="arrow-pink" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f5c2e7" />
+    </marker>
+    <!-- Gradients -->
+    <linearGradient id="grad-input" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a6e3a1" />
+      <stop offset="100%" stop-color="#8ce294" />
+    </linearGradient>
+    <linearGradient id="grad-loop-header" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f5c2e7" />
+      <stop offset="100%" stop-color="#cba6f7" />
+    </linearGradient>
+    <linearGradient id="grad-save" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f9e2af" />
+      <stop offset="100%" stop-color="#f7c86f" />
+    </linearGradient>
+  </defs>
+
+  <style>
+    .bg { fill: #181825; rx: 12px; }
+    .border { stroke: #313244; stroke-width: 1.5; fill: none; rx: 12px; }
+    .text-title { font-family: 'Outfit', 'Inter', system-ui, sans-serif; font-size: 16px; font-weight: 700; fill: #cdd6f4; letter-spacing: 0.5px; }
+    .text-node { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; fill: #cdd6f4; font-weight: 500; }
+    .text-node-dark { font-family: 'Inter', system-ui, sans-serif; font-size: 12px; fill: #11111b; font-weight: 600; }
+    .text-sub { font-family: 'Inter', system-ui, sans-serif; font-size: 11px; fill: #a6adc8; }
+    .arrow-line { stroke: #9399b2; stroke-width: 1.5; fill: none; }
+    .arrow-line-dashed { stroke: #9399b2; stroke-width: 1.5; stroke-dasharray: 4,4; fill: none; }
+    .loop-box { fill: #1e1e2e; stroke: #f5c2e7; stroke-width: 1.5; stroke-dasharray: 6,4; rx: 8px; }
+    .node-input { fill: url(#grad-input); }
+    .node-parser-ast { fill: #313244; stroke: #89b4fa; stroke-width: 1.2; rx: 8px; }
+    .node-step { fill: #181825; stroke: #cba6f7; stroke-width: 1.2; rx: 6px; }
+    .node-target { fill: #1e1e2e; stroke: #fab387; stroke-width: 1.2; rx: 6px; }
+    .node-save { fill: url(#grad-save); }
+  </style>
+
+  <!-- Background Card -->
+  <rect width="760" height="500" class="bg" />
+  <rect width="760" height="500" class="border" />
+
+  <!-- Diagram Title -->
+  <text x="380" y="32" text-anchor="middle" class="text-title">Tusk Compilation &amp; Reduction Pipeline</text>
+
+  <!-- Row 1: Input & Parsing -->
+  <!-- ASCII Input -->
+  <rect x="50" y="60" width="140" height="40" rx="20" class="node-input" />
+  <text x="120" y="84" text-anchor="middle" class="text-node-dark">ASCII Input</text>
+
+  <path d="M 190 80 L 240 80" class="arrow-line" marker-end="url(#arrow)" />
+
+  <!-- nom Parser -->
+  <rect x="250" y="60" width="140" height="40" class="node-parser-ast" />
+  <text x="320" y="84" text-anchor="middle" class="text-node">nom Parser</text>
+
+  <path d="M 390 80 L 440 80" class="arrow-line" marker-end="url(#arrow)" />
+
+  <!-- Expr AST -->
+  <rect x="450" y="60" width="140" height="40" class="node-parser-ast" />
+  <text x="520" y="84" text-anchor="middle" class="text-node">Expr AST</text>
+
+  <!-- Connector from AST down into Loop Container -->
+  <path d="M 590 80 L 640 80 L 640 180 L 610 180" class="arrow-line" marker-end="url(#arrow)" />
+
+  <!-- Row 2: TuskEngine Loop Container -->
+  <rect x="50" y="130" width="550" height="240" class="loop-box" />
+  <text x="65" y="122" class="text-title" fill="url(#grad-loop-header)" font-size="13px">TuskEngine Loop</text>
+
+  <!-- Stacked Loop Steps -->
+  <!-- Step 1 -->
+  <rect x="75" y="150" width="210" height="30" class="node-step" />
+  <text x="180" y="169" text-anchor="middle" class="text-node">Phase Zero Simplifier</text>
+  <path d="M 285 165 L 335 165" class="arrow-line" marker-end="url(#arrow)" />
+  <rect x="345" y="150" width="240" height="30" class="node-target" />
+  <text x="465" y="169" text-anchor="middle" class="text-sub">Algebraic &amp; Trig Reductions</text>
+
+  <!-- Step 2 -->
+  <rect x="75" y="190" width="210" height="30" class="node-step" />
+  <text x="180" y="209" text-anchor="middle" class="text-node">Sum Rule Linearity</text>
+  <path d="M 285 205 L 335 205" class="arrow-line" marker-end="url(#arrow)" />
+  <rect x="345" y="190" width="240" height="30" class="node-target" />
+  <text x="465" y="209" text-anchor="middle" class="text-sub">Linear Term Separation</text>
+
+  <!-- Step 3 -->
+  <rect x="75" y="230" width="210" height="30" class="node-step" />
+  <text x="180" y="249" text-anchor="middle" class="text-node">Basic Integration</text>
+  <path d="M 285 245 L 335 245" class="arrow-line" marker-end="url(#arrow)" />
+  <rect x="345" y="230" width="240" height="30" class="node-target" />
+  <text x="465" y="249" text-anchor="middle" class="text-sub">Direct Lookup Tables</text>
+
+  <!-- Step 4 -->
+  <rect x="75" y="270" width="210" height="30" class="node-step" />
+  <text x="180" y="289" text-anchor="middle" class="text-node">Alpes IBP Heuristic</text>
+  <path d="M 285 285 L 335 285" class="arrow-line" marker-end="url(#arrow)" />
+  <rect x="345" y="270" width="240" height="30" class="node-target" />
+  <text x="465" y="289" text-anchor="middle" class="text-sub">Integration by Parts (L-P-E-T)</text>
+
+  <!-- Step 5 -->
+  <rect x="75" y="310" width="210" height="30" class="node-step" />
+  <text x="180" y="329" text-anchor="middle" class="text-node">Reduction Fallback</text>
+  <path d="M 285 325 L 335 325" class="arrow-line" marker-end="url(#arrow)" />
+  <rect x="345" y="310" width="240" height="30" class="node-target" />
+  <text x="465" y="329" text-anchor="middle" class="text-sub">Rational System Solver</text>
+
+  <!-- Row 3: New AST State Saved -->
+  <!-- Connector from Loop bottom to Save -->
+  <path d="M 325 370 L 325 404" class="arrow-line" marker-end="url(#arrow)" />
+
+  <!-- Save Node -->
+  <rect x="185" y="410" width="280" height="40" rx="8" class="node-save" />
+  <text x="325" y="434" text-anchor="middle" class="text-node-dark">New AST State Saved</text>
+
+  <!-- Loop-back Connector from Save to Loop -->
+  <path d="M 185 430 L 120 430 L 120 375" class="arrow-line" marker-end="url(#arrow-pink)" />
+  <text x="150" y="420" text-anchor="middle" class="text-sub" fill="#f5c2e7" font-size="10px">Loop</text>
+
+  <!-- Termination Arrow from Save -->
+  <path d="M 465 430 L 580 430" class="arrow-line-dashed" marker-end="url(#arrow)" />
+  <text x="522" y="420" text-anchor="middle" class="text-sub">Terminates / Returns</text>
+
+</svg>
