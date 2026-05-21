@@ -6,6 +6,8 @@
 
 A high-performance Rust Terminal UI calculus engine for step-by-step symbolic integration using algebraic heuristics and rational reduction fallbacks.
 
+<a href="https://akrillick.github.io/tusk/"><img src="assets/try_web_button.svg" alt="Try the Web Interface" width="240" /></a>
+
 **Tech Stack:**
 
 <img src="https://skillicons.dev/icons?i=rust,wasm,astro,ts,html,css" alt="Tech Stack" />
