@@ -109,7 +109,7 @@ pub fn solve_steps_json(input: &str) -> String {
             if total > 0 { json.push(','); }
             let final_latex = engine.current_expr.to_latex();
             json.push_str(&format!(
-                r#"{{"step":{},"description":"Final Result","change_detail":"The solution is {}","before_latex":"{}","after_latex":"{}"}}"#,
+                r#"{{"step":{},"description":"Final Result","change_detail":"The solution is ${}$","before_latex":"{}","after_latex":"{}"}}"#,
                 total + 1,
                 json_escape(&final_latex),
                 json_escape(&initial_latex),
