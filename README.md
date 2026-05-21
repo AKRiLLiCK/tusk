@@ -8,7 +8,7 @@ A high-performance, single-binary Terminal User Interface (TUI) calculus engine 
 <img src="assets/tusk_logo.svg" width="128" height="128" alt="Tusk Logo" />
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-24292e.svg?style=flat-square&logo=github" alt="License: MIT" /></a>
-<img src="https://img.shields.io/badge/Release-Peano-007ec6.svg?style=flat-square&logo=github" alt="Release: Peano" />
+<img src="https://img.shields.io/badge/Release-Leibniz-9f3fdf.svg?style=flat-square&logo=github" alt="Release: Leibniz" />
 <img src="https://img.shields.io/badge/Language-Rust-b7410e.svg?style=flat-square&logo=rust" alt="Language: Rust" />
 <img src="https://img.shields.io/badge/Platform-WASM-654ff0.svg?style=flat-square&logo=webassembly&logoColor=white" alt="Platform: WASM" />
 <img src="https://img.shields.io/badge/CI-Passing-2ea44f.svg?style=flat-square&logo=githubactions&logoColor=white" alt="CI: Status" />
