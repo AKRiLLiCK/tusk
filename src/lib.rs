@@ -50,56 +50,25 @@ fn json_escape(s: &str) -> String {
 fn rule_change_detail(rule: &RuleType, before: &Expr, after: &Expr) -> String {
     match rule {
         RuleType::PhaseZero(name) if name == "SumRule" => {
-            format!(
-                "Split {} into separate integrals: {}",
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Split {} into separate integrals", before)
         }
         RuleType::PhaseZero(name) if name == "simplify" => {
-            format!(
-                "Simplified {} to {}",
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Simplified {} to {}", before, after)
         }
         RuleType::PhaseZero(name) if name == "BasicIntegration" => {
-            format!(
-                "Evaluated {} = {}",
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Evaluated {} directly", before)
         }
         RuleType::PhaseZero(name) => {
-            format!(
-                "Applied {} to rewrite {} as {}",
-                name,
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Applied {} to rewrite expression", name)
         }
         RuleType::Substitution { u, du } => {
-            format!(
-                "Let u = {}, then du = {} \\, dx. Rewrote {} as {}",
-                u.to_latex(),
-                du.to_latex(),
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Let u = {}, du = {} dx", u, du)
         }
         RuleType::IntegrationByParts { u, dv } => {
-            format!(
-                "Integration by Parts: let u = {}, dv = {} \\, dx. Applied \\int u \\, dv = uv - \\int v \\, du",
-                u.to_latex(),
-                dv.to_latex()
-            )
+            format!("Let u = {}, dv = {} dx. Applied uv - int(v du)", u, dv)
         }
         RuleType::HermiteReduction => {
-            format!(
-                "Hermite Reduction: decomposed rational integrand {} into partial fractions {}",
-                before.to_latex(),
-                after.to_latex()
-            )
+            format!("Decomposed rational integrand into partial fractions")
         }
     }
 }
