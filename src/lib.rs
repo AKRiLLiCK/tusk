@@ -50,22 +50,22 @@ fn json_escape(s: &str) -> String {
 fn rule_change_detail(rule: &RuleType, before: &Expr, after: &Expr) -> String {
     match rule {
         RuleType::PhaseZero(name) if name == "SumRule" => {
-            format!("Split {} into separate integrals", before)
+            format!("Split ${}$ into separate integrals: ${}$", before.to_latex(), after.to_latex())
         }
         RuleType::PhaseZero(name) if name == "simplify" => {
-            format!("Simplified {} to {}", before, after)
+            format!("Simplified ${}$ to ${}$", before.to_latex(), after.to_latex())
         }
         RuleType::PhaseZero(name) if name == "BasicIntegration" => {
-            format!("Evaluated {} directly", before)
+            format!("Evaluated ${}$ directly", before.to_latex())
         }
         RuleType::PhaseZero(name) => {
             format!("Applied {} to rewrite expression", name)
         }
         RuleType::Substitution { u, du } => {
-            format!("Let u = {}, du = {} dx", u, du)
+            format!("Let $u = {}$, $du = {} \\, dx$", u.to_latex(), du.to_latex())
         }
         RuleType::IntegrationByParts { u, dv } => {
-            format!("Let u = {}, dv = {} dx. Applied uv - int(v du)", u, dv)
+            format!("Let $u = {}$, $dv = {} \\, dx$. Applied $\\int u \\, dv = uv - \\int v \\, du$", u.to_latex(), dv.to_latex())
         }
         RuleType::HermiteReduction => {
             format!("Decomposed rational integrand into partial fractions")
