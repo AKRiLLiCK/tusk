@@ -98,6 +98,27 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
             }
             None
         }
+        Expr::Mul(l, r) => {
+            if let Expr::Const(_) = **l {
+                if let Some(int_r) = simple_integrate(r, var) {
+                    return Some(Expr::Mul(l.clone(), Box::new(int_r)));
+                }
+            }
+            if let Expr::Const(_) = **r {
+                if let Some(int_l) = simple_integrate(l, var) {
+                    return Some(Expr::Mul(r.clone(), Box::new(int_l)));
+                }
+            }
+            None
+        }
+        Expr::Div(l, r) => {
+            if let Expr::Const(_) = **r {
+                if let Some(int_l) = simple_integrate(l, var) {
+                    return Some(Expr::Div(Box::new(int_l), r.clone()));
+                }
+            }
+            None
+        }
         _ => None,
     }
 }

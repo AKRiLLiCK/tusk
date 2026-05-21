@@ -47,6 +47,22 @@ impl Transform for BasicIntegration {
                     })
                 } else { None }
             }
+            // Rule 3: Handle Sub nodes (e.g., x*sin(x) - int(sin(x)))
+            Expr::Sub(left, right) => {
+                let left_solved = self.apply(left);
+                let right_solved = self.apply(right);
+
+                if left_solved.is_some() || right_solved.is_some() {
+                    Some(Transformation {
+                        new_state: Expr::Sub(
+                            Box::new(left_solved.map(|t| t.new_state).unwrap_or_else(|| *left.clone())),
+                            Box::new(right_solved.map(|t| t.new_state).unwrap_or_else(|| *right.clone())),
+                        ),
+                        description: "Basic Integration: Solving sub-terms".into(),
+                        rule: RuleType::PhaseZero("BasicIntegration".into()),
+                    })
+                } else { None }
+            }
             _ => None,
         }
     }
