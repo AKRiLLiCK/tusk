@@ -1,0 +1,229 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Tusk</title><meta name="description" content="Tusk — a symbolic calculus engine powered by WebAssembly. Solve integrals step-by-step with full working shown."><link rel="icon" type="image/svg+xml" href="/tusk/favicon.svg"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css"><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="/tusk/_astro/index.C7cGjvr-.css"></head> <body> <div class="tusk-app"> <nav class="top-nav"> <div class="nav-branding"> <img src="/tusk/tusk_logo.svg" alt="Tusk Logo" class="nav-logo"> <span class="nav-title">Tusk</span> </div> <div class="nav-buttons"> <a href="/tusk" class="nav-btn">Engine</a> <a href="/tusk/docs" class="nav-btn">Documentation</a> </div> </nav> <header class="tusk-hero"> <div class="hero-title">
+You can
+<div class="scroller"> <div class="scroller-inner"> <span>integrate</span> <span>derivate</span> <span>simplify</span> <span>graph</span> <span aria-hidden="true">integrate</span> </div> </div> </div> <div class="wa-search-bar"> <input type="text" id="waInput" placeholder="int(x^2 + sin(x))" autocomplete="off" spellcheck="false"> <button id="waSubmit">=</button> </div> </header> <main class="wa-content"> <div class="wa-pod" id="pod-input" style="display: none;"> <h2 class="wa-pod-title">Input Interpretation</h2> <div class="wa-pod-content" id="wa-input-render"></div> </div> <div class="wa-pod" id="pod-graph" style="display: none;"> <h2 class="wa-pod-title">Function Plot</h2> <div class="wa-pod-content" id="graphContainer" style="padding: 1rem;"> <!-- SVG will be injected here --> </div> </div> <div class="steps-container" id="steps-container" style="display: none;"> <div class="steps-header"> <span class="steps-header-icon">⧫</span>
+Solution Steps
+</div> <div class="steps-list" id="steps-list"></div> </div> <div class="wa-pod" id="pod-result" style="display: none;"> <h2 class="wa-pod-title">Result</h2> <div class="wa-pod-content" id="wa-result-render"></div> </div> </main> </div> <footer class="tusk-footer"> <div class="footer-content"> <div class="license"> <svg class="mit-logo" viewBox="0 0 100 65" fill="currentColor"> <!-- M --> <rect x="0" y="0" width="12" height="65"></rect> <rect x="18" y="0" width="12" height="38"></rect> <rect x="36" y="0" width="12" height="65"></rect> <!-- I --> <rect x="54" y="0" width="12" height="65"></rect> <!-- T --> <rect x="72" y="0" width="28" height="12"></rect> <rect x="80" y="18" width="12" height="47"></rect> </svg> <span>MIT License</span> </div> <div class="author">
+Made by <a href="https://akrillick.github.io/web/" target="_blank" rel="noopener">Acrilic</a> </div> </div> </footer> <script type="module">
+    import init, { solve_latex, parse_to_latex, solve_steps_json, generate_graph_svg, eval_math } from '/tusk/pkg/tusk.js';
+
+    async function loadEngine() {
+      try {
+        await init();
+      } catch (e) {
+        console.error("Wasm Init Failed:", e);
+      }
+    }
+    loadEngine();
+
+    const graphContainer = document.getElementById('graphContainer');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'graph-tooltip';
+    const crosshair = document.createElement('div');
+    crosshair.className = 'graph-crosshair';
+    
+    let currentExpr = null;
+    let currentMinY = -10;
+    let currentMaxY = 10;
+
+    function updateGraphInteractivity(expr) {
+      currentExpr = expr;
+      let minY = Number.MAX_VALUE;
+      let maxY = -Number.MAX_VALUE;
+      for (let i = -100; i <= 100; i++) {
+        let y = eval_math(expr, i / 10.0);
+        if (isFinite(y) && !isNaN(y)) {
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+      if (minY === Number.MAX_VALUE) {
+        minY = -10; maxY = 10;
+      } else {
+        let margin = Math.max(maxY - minY, 1.0) * 0.1;
+        minY -= margin;
+        maxY += margin;
+        if (maxY - minY < 1e-6) {
+          minY -= 1.0; maxY += 1.0;
+        }
+      }
+      currentMinY = minY;
+      currentMaxY = maxY;
+    }
+
+    graphContainer.addEventListener('mousemove', (e) => {
+      const svg = graphContainer.querySelector('svg');
+      if (!svg || !currentExpr) return;
+      
+      const rect = svg.getBoundingClientRect();
+      let xPixel = e.clientX - rect.left;
+      
+      let scaleX = rect.width / 600;
+      let scaleY = rect.height / 400;
+      
+      let svgX = xPixel / scaleX;
+      let math_x = -10 + ((svgX - 60) / 520) * 20;
+      
+      if (math_x < -10) math_x = -10;
+      if (math_x > 10) math_x = 10;
+      
+      let math_y = eval_math(currentExpr, math_x);
+      
+      if (isNaN(math_y) || !isFinite(math_y)) {
+        tooltip.style.display = 'none';
+        crosshair.style.display = 'none';
+        return;
+      }
+      
+      let y_px = 350 - ((math_y - currentMinY) / (currentMaxY - currentMinY)) * 330;
+      let x_px = 60 + ((math_x - (-10)) / 20) * 520;
+      
+      crosshair.style.left = (x_px * scaleX) + 'px';
+      crosshair.style.top = (y_px * scaleY) + 'px';
+      crosshair.style.display = 'block';
+      
+      tooltip.style.left = (x_px * scaleX) + 'px';
+      tooltip.style.top = (y_px * scaleY - 15) + 'px';
+      tooltip.innerHTML = `x: ${math_x.toFixed(2)}<br>y: ${math_y.toFixed(2)}`;
+      tooltip.style.display = 'block';
+    });
+
+    graphContainer.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+      crosshair.style.display = 'none';
+    });
+
+    function renderSteps(stepsJson) {
+      const container = document.getElementById('steps-container');
+      const list = document.getElementById('steps-list');
+
+      let steps;
+      try {
+        steps = JSON.parse(stepsJson);
+      } catch (e) {
+        console.error("Failed to parse steps JSON:", e);
+        container.style.display = 'none';
+        return;
+      }
+
+      if (!steps || steps.length <= 1) {
+        container.style.display = 'none';
+        return;
+      }
+
+      list.innerHTML = '';
+      container.style.display = 'block';
+
+      steps.forEach((step, idx) => {
+        const isFinal = step.description === 'Final Result';
+        const item = document.createElement('div');
+        item.className = 'step-item' + (isFinal ? ' step-final' : '');
+        item.style.animationDelay = `${idx * 0.08}s`;
+
+        const badge = document.createElement('div');
+        badge.className = 'step-badge';
+        badge.textContent = isFinal ? '✓' : step.step;
+
+        const body = document.createElement('div');
+        body.className = 'step-body';
+
+        const rule = document.createElement('div');
+        rule.className = 'step-rule';
+
+        const ruleText = document.createElement('span');
+        ruleText.textContent = step.description;
+        rule.appendChild(ruleText);
+
+        if (step.precision_percent !== undefined) {
+          const precision = document.createElement('span');
+          precision.className = 'step-precision';
+          precision.textContent = `PRECISION: ${step.precision_percent}%`;
+          rule.appendChild(precision);
+        }
+
+        const detail = document.createElement('div');
+        detail.className = 'step-detail';
+        try {
+          detail.innerHTML = step.change_detail.replace(/\$([^\$]+)\$/g, (match, tex) => {
+            return katex.renderToString(tex, { throwOnError: false, displayMode: false });
+          });
+        } catch (e) {
+          detail.textContent = step.change_detail;
+        }
+
+        const transformation = document.createElement('div');
+        transformation.className = 'step-transformation';
+
+        body.appendChild(rule);
+        body.appendChild(detail);
+        body.appendChild(transformation);
+        item.appendChild(badge);
+        item.appendChild(body);
+        list.appendChild(item);
+
+        try {
+          if (!isFinal && step.before_latex && step.before_latex !== step.after_latex) {
+            const beforeEl = document.createElement('span');
+            beforeEl.className = 'step-latex-before';
+            katex.render(step.before_latex, beforeEl, { throwOnError: false, displayMode: false });
+            transformation.appendChild(beforeEl);
+
+            const arrow = document.createElement('span');
+            arrow.className = 'step-arrow';
+            arrow.textContent = '→';
+            transformation.appendChild(arrow);
+          }
+          const afterEl = document.createElement('span');
+          katex.render(step.after_latex, afterEl, { throwOnError: false, displayMode: false });
+          transformation.appendChild(afterEl);
+        } catch (e) {
+          transformation.textContent = step.after_latex;
+        }
+      });
+    }
+
+    window.runEnginePipeline = function() {
+      const input = document.getElementById('waInput');
+      const renderInput = document.getElementById('wa-input-render');
+      const renderResult = document.getElementById('wa-result-render');
+
+      if (!input || !input.value.trim()) return;
+      const rawInput = input.value.trim();
+
+      try {
+        const inputLatex = parse_to_latex(rawInput);
+        const resultLatex = solve_latex(rawInput);
+        const stepsJson = solve_steps_json(rawInput);
+
+        document.getElementById('pod-input').style.display = 'block';
+        document.getElementById('pod-result').style.display = 'block';
+
+        const svgGraph = generate_graph_svg(rawInput);
+        if (svgGraph && svgGraph.trim().length > 0) {
+            document.getElementById('pod-graph').style.display = 'block';
+            graphContainer.innerHTML = svgGraph;
+            graphContainer.appendChild(tooltip);
+            graphContainer.appendChild(crosshair);
+            updateGraphInteractivity(rawInput);
+            
+            const svgEl = graphContainer.querySelector('svg');
+            if (svgEl) {
+                svgEl.style.maxWidth = "100%";
+                svgEl.style.height = "auto";
+            }
+        } else {
+            document.getElementById('pod-graph').style.display = 'none';
+        }
+
+        katex.render(inputLatex, renderInput, { throwOnError: false, displayMode: true });
+        katex.render(resultLatex, renderResult, { throwOnError: false, displayMode: true });
+        renderSteps(stepsJson);
+      } catch (err) {
+        console.error("Execution error:", err);
+      }
+    }
+
+    document.getElementById('waSubmit')?.addEventListener('click', window.runEnginePipeline);
+    document.getElementById('waInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') window.runEnginePipeline();
+    });
+  </script> </body> </html>

@@ -1,124 +1,72 @@
-mod ast;
-mod calculus;
-mod engine;
-mod heuristics;
-mod risch;
+pub mod ast;
+pub mod calculus;
+pub mod definite;
+pub mod engine;
+pub mod heuristics;
+pub mod risch;
+
+// Conditionally compile the UI module only for native targets to avoid ratatui/crossterm WASM build errors
+#[cfg(not(target_arch = "wasm32"))]
+pub mod ui;
 
 use wasm_bindgen::prelude::*;
 use crate::ast::Expr;
-use crate::engine::{RuleType, TuskEngine};
+use crate::calculus::eval;
 
 #[wasm_bindgen]
-pub fn solve(input: &str) -> String {
-    match Expr::parse(input) {
-        Ok(expr) => {
-            let mut engine = TuskEngine::new(expr);
-            engine.run();
-            format!("{}", engine.current_expr)
+pub fn generate_graph_svg(expression: &str) -> String {
+    let expr = match Expr::parse(expression) {
+        Ok(e) => e,
+        Err(_) => return String::from(r#"<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg"></svg>"#),
+    };
+
+    let w = 800.0;
+    let h = 600.0;
+    let x_min = -10.0;
+    let x_max = 10.0;
+    let y_min = -10.0;
+    let y_max = 10.0;
+
+    let mut path = String::new();
+    let steps = 400;
+
+    for i in 0..=steps {
+        let x = x_min + (i as f64 / steps as f64) * (x_max - x_min);
+        let y = eval(&expr, "x", x).unwrap_or(0.0);
+
+        let px = (x - x_min) / (x_max - x_min) * w;
+        let py = h - ((y - y_min) / (y_max - y_min) * h);
+
+        if i == 0 {
+            path.push_str(&format!("M {:.1} {:.1} ", px, py));
+        } else {
+            path.push_str(&format!("L {:.1} {:.1} ", px, py));
         }
-        Err(e) => format!("Error: {}", e),
     }
+
+    format!(
+        r##"<svg viewBox="0 0 800 600" xmlns="http://www.w3.org/2000/svg"><path d="{}" fill="none" stroke="#b48cff" stroke-width="2"/></svg>"##,
+        path
+    )
 }
 
 #[wasm_bindgen]
 pub fn solve_latex(input: &str) -> String {
     match Expr::parse(input) {
-        Ok(expr) => {
-            let mut engine = TuskEngine::new(expr);
-            engine.run();
-            engine.current_expr.to_latex()
-        }
-        Err(e) => format!("Error: {}", e),
-    }
-}
-
-#[wasm_bindgen]
-pub fn parse_to_latex(input: &str) -> String {
-    match Expr::parse(input) {
         Ok(expr) => expr.to_latex(),
-        Err(e) => format!("Error: {}", e),
-    }
-}
-
-fn json_escape(s: &str) -> String {
-    s.replace('\\', "\\\\")
-     .replace('"', "\\\"")
-     .replace('\n', "\\n")
-     .replace('\r', "\\r")
-}
-
-fn rule_change_detail(rule: &RuleType, before: &Expr, after: &Expr) -> String {
-    match rule {
-        RuleType::PhaseZero(name) if name == "SumRule" => {
-            format!("Split ${}$ into separate integrals: ${}$", before.to_latex(), after.to_latex())
-        }
-        RuleType::PhaseZero(name) if name == "simplify" => {
-            format!("Simplified ${}$ to ${}$", before.to_latex(), after.to_latex())
-        }
-        RuleType::PhaseZero(name) if name == "BasicIntegration" => {
-            format!("Evaluated ${}$ directly", before.to_latex())
-        }
-        RuleType::PhaseZero(name) => {
-            format!("Applied {} to rewrite expression", name)
-        }
-        RuleType::Substitution { u, du } => {
-            format!("Let $u = {}$, $du = {} \\, dx$", u.to_latex(), du.to_latex())
-        }
-        RuleType::IntegrationByParts { u, dv } => {
-            format!("Let $u = {}$, $dv = {} \\, dx$. Applied $\\int u \\, dv = uv - \\int v \\, du$", u.to_latex(), dv.to_latex())
-        }
-        RuleType::HermiteReduction => {
-            format!("Decomposed rational integrand into partial fractions")
-        }
+        Err(_) => "Error parsing input".to_string(),
     }
 }
 
 #[wasm_bindgen]
 pub fn solve_steps_json(input: &str) -> String {
-    match Expr::parse(input) {
-        Ok(expr) => {
-            let initial_latex = expr.to_latex();
-            let mut engine = TuskEngine::new(expr);
-            engine.run();
+    let expr = match Expr::parse(input) {
+        Ok(e) => e,
+        Err(_) => return "[]".to_string(),
+    };
 
-            let mut json = String::from("[");
+    let mut engine = crate::engine::TuskEngine::new(expr);
+    engine.run();
 
-            for (i, step) in engine.steps.iter().enumerate() {
-                if i > 0 { json.push(','); }
-                let before_latex = step.initial_state.to_latex();
-                let after_latex = step.transformation.new_state.to_latex();
-                let description = &step.transformation.description;
-                let change_detail = rule_change_detail(
-                    &step.transformation.rule,
-                    &step.initial_state,
-                    &step.transformation.new_state,
-                );
-
-                json.push_str(&format!(
-                    r#"{{"step":{},"description":"{}","change_detail":"{}","before_latex":"{}","after_latex":"{}"}}"#,
-                    i + 1,
-                    json_escape(description),
-                    json_escape(&change_detail),
-                    json_escape(&before_latex),
-                    json_escape(&after_latex),
-                ));
-            }
-
-            // Append final result entry
-            let total = engine.steps.len();
-            if total > 0 { json.push(','); }
-            let final_latex = engine.current_expr.to_latex();
-            json.push_str(&format!(
-                r#"{{"step":{},"description":"Final Result","change_detail":"The solution is ${}$","before_latex":"{}","after_latex":"{}"}}"#,
-                total + 1,
-                json_escape(&final_latex),
-                json_escape(&initial_latex),
-                json_escape(&final_latex),
-            ));
-
-            json.push(']');
-            json
-        }
-        Err(e) => format!(r#"[{{"step":1,"description":"Error","change_detail":"{}","before_latex":"","after_latex":""}}]"#, json_escape(&e)),
-    }
-}
+    serde_json::to_string(&engine.steps).unwrap_or_else(|_| "[]".to_string())
+}

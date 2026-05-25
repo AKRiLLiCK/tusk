@@ -1,37 +1,24 @@
-# Tusk Architecture
+# Tusk Engine Architecture
 
-## AST Design
+Tusk is a symbolic calculus engine. It is not a web framework. It operates exclusively via a terminal user interface or programmatic API.
 
-At the core of Tusk is a recursive enum structure `Expr` optimized for pattern matching and transformation, parsing mathematical expressions from the `.tk` format.
+## Core Mechanisms
 
-```rust
-pub enum Expr {
-    Var(String),
-    Const(f64),
-    Add(Box<Expr>, Box<Expr>),
-    Mul(Box<Expr>, Box<Expr>),
-    Pow(Box<Expr>, Box<Expr>),
-    Sin(Box<Expr>),
-    Cos(Box<Expr>),
-    Integral { integrand: Box<Expr>, variable: String },
-    // ...
-}
-```
+Tusk processes mathematical expressions using a recursive descent parser to construct an Abstract Syntax Tree (AST). The AST is subjected to sequential domain-specific transformations. All operations execute strictly without runtime panics.
 
-## The Transformation Pipeline
+### Domain Dispatch
+Tusk implements a `SolveDomain` trait to isolate mathematical operations. The engine maps root AST nodes to their corresponding domain solver. Traversal operations do not clone AST sub-trees during evaluation. If an expression cannot be resolved the domain returns `DomainError::UnsupportedOperation`.
 
-Tusk avoids mutable evaluation in place. Instead, it utilizes a Transformation Pipeline that persists the full AST state at every step. This provides:
-1. **Time-Travel Debugging:** Seamlessly scrubbing backward and forward through the integration steps.
-2. **Deterministic UI Rendering:** The UI acts simply as a visualizer for a series of `Step` structures.
+### Numeric Evaluation
+For definite integrals Tusk utilizes a dynamic Taylor series expansion algorithm.
+The expansion center is calculated as the precise midpoint of the evaluation interval. The algorithm limits computation to a maximum of 20 terms and evaluates the Lagrange remainder $R_n(x)$ at each step. If the absolute value of the remainder exceeds the defined $\epsilon = 10^{-6}$ at either boundary the evaluation halts and yields `DomainError::ConvergenceFailure`.
 
-### Traits and State
+### Native Graphing
+Rendering is restricted to the terminal emulator. Tusk utilizes the `ratatui` crate to construct canvas widgets mapping evaluated coordinates directly to terminal grid cells. No external rendering engines or web-stack dependencies are invoked.
 
-- **`Transform` trait:** The core interface for heuristic rules.
-- **`RuleType`:** Categorizes the heuristic applied (e.g., PhaseZero, IntegrationByParts).
-- **`Step`:** Captures the initial AST state before the transformation and the `Transformation` itself.
+## Guarantee Modeling
 
-## Evaluation Strategy
-
-1. **Phase Zero (The Clean Up):** Heuristics to simplify the integrands using algebraic expansion, fraction splitting, and trigonometric reduction.
-2. **Decision Engine:** Application of substitution, partial fractions, and the ALPES order for Integration by Parts.
-3. **Risch Stub:** A mathematically sound fallback implementing Hermite reduction for rational functions.
+*   **Compiler-enforced:** Zero-allocation traversals are guaranteed by trait signatures enforcing borrowing.
+*   **Compiler-enforced:** The `#![deny(clippy::unwrap_used)]` attribute ensures no unwraps or panics exist.
+*   **Library-enforced:** Graphing dependencies are restricted to terminal-native crates via `Cargo.toml`.
+*   **Test-enforced:** Numeric integration routines are validated against standard trigonometric logarithmic and exponential function families.

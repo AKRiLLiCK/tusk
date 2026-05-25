@@ -1,6 +1,17 @@
 use crate::ast::Expr;
-use crate::heuristics::{SumRule, PhaseZeroSimplifier, AlpesIBP, Substitution};
+use crate::heuristics::{AlpesIBP, BasicIntegration, PhaseZeroSimplifier, Substitution, SumRule};
 use crate::risch::RationalHermiteReduction;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DomainError {
+    ConvergenceFailure,
+    UnsupportedOperation,
+    EvaluationError,
+}
+
+pub trait SolveDomain {
+    fn solve(&self, expr: &Expr) -> Result<Expr, DomainError>;
+}
 
 #[derive(Debug, Clone, PartialEq)]
 #[allow(dead_code)]
@@ -15,6 +26,9 @@ pub enum RuleType {
 pub struct Transformation {
     pub new_state: Expr,
     pub description: String,
+    #[allow(dead_code)]
+    pub precision_percent: f64,
+    #[allow(dead_code)]
     pub rule: RuleType,
 }
 
@@ -35,18 +49,21 @@ pub struct TuskEngine {
 
 impl TuskEngine {
     pub fn new(initial_expr: Expr) -> Self {
-        Self { steps: Vec::new(), current_expr: initial_expr }
+        Self {
+            steps: Vec::new(),
+            current_expr: initial_expr,
+        }
     }
 
     pub fn run(&mut self) {
         let rules: Vec<&dyn Transform> = vec![
             &PhaseZeroSimplifier as &dyn Transform,
             &SumRule as &dyn Transform,
-            &crate::heuristics::BasicIntegration as &dyn Transform, // Added this
+            &BasicIntegration as &dyn Transform,
             &Substitution as &dyn Transform,
             &AlpesIBP as &dyn Transform,
             &RationalHermiteReduction as &dyn Transform,
-    ];
+        ];
 
         loop {
             let found = rules.iter().find_map(|r| r.apply(&self.current_expr));

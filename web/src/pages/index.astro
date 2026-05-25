@@ -6,7 +6,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tusk - Computational Intelligence</title>
+  <title>Tusk</title>
   <meta name="description" content="Tusk — a symbolic calculus engine powered by WebAssembly. Solve integrals step-by-step with full working shown." />
   <link rel="icon" type="image/svg+xml" href="/tusk/favicon.svg" />
   
@@ -55,32 +55,204 @@
       padding: 3.5rem 1.25rem 4rem;
     }
 
-    /* ── Header ── */
-    .tusk-header {
+    /* ── Navigation Bar ── */
+    .top-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      padding: 1rem 1.25rem;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      margin-bottom: 3rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 0.75rem;
+    }
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.6rem 1.2rem;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-accent);
+      color: #fff;
+    }
+    .nav-branding {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-logo {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 0 8px rgba(249, 99, 2, 0.4));
+    }
+    .nav-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+    .error-pod {
+      border: 1px solid rgba(255, 100, 100, 0.2);
+    }
+    
+    /* ── Graph Interactivity ── */
+    #graphContainer {
+      position: relative;
+    }
+    .graph-tooltip {
+      position: absolute;
+      background: var(--panel-bg);
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      pointer-events: none;
+      display: none;
+      transform: translate(-50%, -120%);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      font-family: 'JetBrains Mono', monospace;
+      z-index: 10;
+    }
+    .graph-crosshair {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background: var(--accent);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      display: none;
+      box-shadow: 0 0 12px var(--accent-glow);
+      z-index: 10;
+    }
+
+    /* ── Footer ── */
+    .tusk-footer {
+      margin-top: 5rem;
+      padding-top: 2rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      color: var(--text-dim);
+      font-size: 0.85rem;
+      padding-bottom: 2rem;
+      width: 100%;
+    }
+    .footer-content {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      max-width: 800px;
+      padding: 0 1.25rem;
+      align-items: center;
+    }
+    .license {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .license svg {
+      width: 32px;
+      height: auto;
+      fill: currentColor;
+    }
+    .author a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .author a:hover {
+      text-decoration: underline;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.6rem 1.2rem;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: var(--border-accent);
+      color: #fff;
+    }
+    .nav-branding {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.25rem 0.5rem;
+    }
+    .nav-logo {
+      width: 28px;
+      height: 28px;
+      filter: drop-shadow(0 0 8px rgba(249, 99, 2, 0.4));
+    }
+    .nav-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    /* ── Hero Section ── */
+    .tusk-hero {
       text-align: center;
       margin-bottom: 2.5rem;
     }
-    .tusk-logo {
-      width: 52px;
-      height: 52px;
-      margin-bottom: 0.75rem;
-      filter: drop-shadow(0 0 12px rgba(249, 99, 2, 0.3));
-    }
-    h1 {
+    .hero-title {
       font-size: 2.25rem;
       font-weight: 700;
       letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.6rem;
+      color: #fff;
+    }
+    .scroller {
+      height: 2.75rem;
+      overflow: hidden;
+      position: relative;
+    }
+    .scroller-inner {
+      animation: slide 10s infinite;
+    }
+    .scroller span {
+      display: block;
+      height: 2.75rem;
+      line-height: 2.75rem;
       background: linear-gradient(135deg, #fff 0%, #c8c8d8 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    .subtitle {
-      color: var(--text-dim);
-      font-size: 0.95rem;
-      margin-top: 0.35rem;
-      margin-bottom: 2rem;
-      font-weight: 400;
+    @keyframes slide {
+      0%, 20% { transform: translateY(0); }
+      25%, 45% { transform: translateY(-2.75rem); }
+      50%, 70% { transform: translateY(-5.5rem); }
+      75%, 95% { transform: translateY(-8.25rem); }
+      100% { transform: translateY(-11rem); }
     }
 
     /* ── Search Bar ── */
@@ -247,6 +419,18 @@
       text-transform: uppercase;
       letter-spacing: 0.8px;
       margin-bottom: 0.25rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .step-precision {
+      font-size: 0.7rem;
+      color: var(--success);
+      background: rgba(52, 211, 153, 0.1);
+      padding: 0.1rem 0.4rem;
+      border-radius: 4px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
     }
     .step-item.step-final .step-rule {
       color: var(--success);
@@ -330,11 +514,31 @@
 </head>
 <body>
   <div class="tusk-app">
-    <header class="tusk-header">
-      <img src="/tusk/tusk_logo.svg" alt="Tusk Logo" class="tusk-logo" />
-      <h1>Tusk</h1>
-      <p class="subtitle">Computational Intelligence</p>
-      
+    <nav class="top-nav">
+      <div class="nav-branding">
+        <img src="/tusk/tusk_logo.svg" alt="Tusk Logo" class="nav-logo" />
+        <span class="nav-title">Tusk</span>
+      </div>
+      <div class="nav-buttons">
+        <a href="/tusk" class="nav-btn">Engine</a>
+        <a href="/tusk/docs" class="nav-btn">Documentation</a>
+      </div>
+    </nav>
+
+    <header class="tusk-hero">
+      <div class="hero-title">
+        You can
+        <div class="scroller">
+          <div class="scroller-inner">
+            <span>integrate</span>
+            <span>derivate</span>
+            <span>simplify</span>
+            <span>graph</span>
+            <span aria-hidden="true">integrate</span>
+          </div>
+        </div>
+      </div>
+
       <div class="wa-search-bar">
         <input type="text" id="waInput" placeholder="int(x^2 + sin(x))" autocomplete="off" spellcheck="false" />
         <button id="waSubmit">=</button>
@@ -345,6 +549,13 @@
       <div class="wa-pod" id="pod-input" style="display: none;">
         <h2 class="wa-pod-title">Input Interpretation</h2>
         <div class="wa-pod-content" id="wa-input-render"></div>
+      </div>
+
+      <div class="wa-pod" id="pod-graph" style="display: none;">
+        <h2 class="wa-pod-title">Function Plot</h2>
+        <div class="wa-pod-content" id="graphContainer" style="padding: 1rem;">
+          <!-- SVG will be injected here -->
+        </div>
       </div>
 
       <div class="steps-container" id="steps-container" style="display: none;">
@@ -362,8 +573,30 @@
     </main>
   </div>
 
+  <footer class="tusk-footer">
+    <div class="footer-content">
+      <div class="license">
+        <svg class="mit-logo" viewBox="0 0 100 65" fill="currentColor">
+          <!-- M -->
+          <rect x="0" y="0" width="12" height="65" />
+          <rect x="18" y="0" width="12" height="38" />
+          <rect x="36" y="0" width="12" height="65" />
+          <!-- I -->
+          <rect x="54" y="0" width="12" height="65" />
+          <!-- T -->
+          <rect x="72" y="0" width="28" height="12" />
+          <rect x="80" y="18" width="12" height="47" />
+        </svg>
+        <span>MIT License</span>
+      </div>
+      <div class="author">
+        Made by <a href="https://akrillick.github.io/web/" target="_blank" rel="noopener">Acrilic</a>
+      </div>
+    </div>
+  </footer>
+
   <script type="module">
-    import init, { solve_latex, parse_to_latex, solve_steps_json } from '/tusk/pkg/tusk.js';
+    import init, { solve_latex, parse_to_latex, solve_steps_json, generate_graph_svg, eval_math } from '/tusk/pkg/tusk.js';
 
     async function loadEngine() {
       try {
@@ -372,13 +605,89 @@
         console.error("Wasm Init Failed:", e);
       }
     }
-    
     loadEngine();
+
+    const graphContainer = document.getElementById('graphContainer');
+    const tooltip = document.createElement('div');
+    tooltip.className = 'graph-tooltip';
+    const crosshair = document.createElement('div');
+    crosshair.className = 'graph-crosshair';
+    
+    let currentExpr = null;
+    let currentMinY = -10;
+    let currentMaxY = 10;
+
+    function updateGraphInteractivity(expr) {
+      currentExpr = expr;
+      let minY = Number.MAX_VALUE;
+      let maxY = -Number.MAX_VALUE;
+      for (let i = -100; i <= 100; i++) {
+        let y = eval_math(expr, i / 10.0);
+        if (isFinite(y) && !isNaN(y)) {
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+      if (minY === Number.MAX_VALUE) {
+        minY = -10; maxY = 10;
+      } else {
+        let margin = Math.max(maxY - minY, 1.0) * 0.1;
+        minY -= margin;
+        maxY += margin;
+        if (maxY - minY < 1e-6) {
+          minY -= 1.0; maxY += 1.0;
+        }
+      }
+      currentMinY = minY;
+      currentMaxY = maxY;
+    }
+
+    graphContainer.addEventListener('mousemove', (e) => {
+      const svg = graphContainer.querySelector('svg');
+      if (!svg || !currentExpr) return;
+      
+      const rect = svg.getBoundingClientRect();
+      let xPixel = e.clientX - rect.left;
+      
+      let scaleX = rect.width / 600;
+      let scaleY = rect.height / 400;
+      
+      let svgX = xPixel / scaleX;
+      let math_x = -10 + ((svgX - 60) / 520) * 20;
+      
+      if (math_x < -10) math_x = -10;
+      if (math_x > 10) math_x = 10;
+      
+      let math_y = eval_math(currentExpr, math_x);
+      
+      if (isNaN(math_y) || !isFinite(math_y)) {
+        tooltip.style.display = 'none';
+        crosshair.style.display = 'none';
+        return;
+      }
+      
+      let y_px = 350 - ((math_y - currentMinY) / (currentMaxY - currentMinY)) * 330;
+      let x_px = 60 + ((math_x - (-10)) / 20) * 520;
+      
+      crosshair.style.left = (x_px * scaleX) + 'px';
+      crosshair.style.top = (y_px * scaleY) + 'px';
+      crosshair.style.display = 'block';
+      
+      tooltip.style.left = (x_px * scaleX) + 'px';
+      tooltip.style.top = (y_px * scaleY - 15) + 'px';
+      tooltip.innerHTML = `x: ${math_x.toFixed(2)}<br>y: ${math_y.toFixed(2)}`;
+      tooltip.style.display = 'block';
+    });
+
+    graphContainer.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+      crosshair.style.display = 'none';
+    });
 
     function renderSteps(stepsJson) {
       const container = document.getElementById('steps-container');
       const list = document.getElementById('steps-list');
-      
+
       let steps;
       try {
         steps = JSON.parse(stepsJson);
@@ -389,7 +698,6 @@
       }
 
       if (!steps || steps.length <= 1) {
-        // Only a final result, no intermediate steps worth showing
         container.style.display = 'none';
         return;
       }
@@ -399,7 +707,6 @@
 
       steps.forEach((step, idx) => {
         const isFinal = step.description === 'Final Result';
-        
         const item = document.createElement('div');
         item.className = 'step-item' + (isFinal ? ' step-final' : '');
         item.style.animationDelay = `${idx * 0.08}s`;
@@ -413,12 +720,21 @@
 
         const rule = document.createElement('div');
         rule.className = 'step-rule';
-        rule.textContent = step.description;
+
+        const ruleText = document.createElement('span');
+        ruleText.textContent = step.description;
+        rule.appendChild(ruleText);
+
+        if (step.precision_percent !== undefined) {
+          const precision = document.createElement('span');
+          precision.className = 'step-precision';
+          precision.textContent = `PRECISION: ${step.precision_percent}%`;
+          rule.appendChild(precision);
+        }
 
         const detail = document.createElement('div');
         detail.className = 'step-detail';
         try {
-          // Render inline KaTeX for any text wrapped in $ $
           detail.innerHTML = step.change_detail.replace(/\$([^\$]+)\$/g, (match, tex) => {
             return katex.renderToString(tex, { throwOnError: false, displayMode: false });
           });
@@ -436,7 +752,6 @@
         item.appendChild(body);
         list.appendChild(item);
 
-        // Render before → after LaTeX
         try {
           if (!isFinal && step.before_latex && step.before_latex !== step.after_latex) {
             const beforeEl = document.createElement('span');
@@ -449,7 +764,6 @@
             arrow.textContent = '→';
             transformation.appendChild(arrow);
           }
-
           const afterEl = document.createElement('span');
           katex.render(step.after_latex, afterEl, { throwOnError: false, displayMode: false });
           transformation.appendChild(afterEl);
@@ -463,10 +777,10 @@
       const input = document.getElementById('waInput');
       const renderInput = document.getElementById('wa-input-render');
       const renderResult = document.getElementById('wa-result-render');
-      
+
       if (!input || !input.value.trim()) return;
       const rawInput = input.value.trim();
-      
+
       try {
         const inputLatex = parse_to_latex(rawInput);
         const resultLatex = solve_latex(rawInput);
@@ -474,17 +788,26 @@
 
         document.getElementById('pod-input').style.display = 'block';
         document.getElementById('pod-result').style.display = 'block';
-        
-        katex.render(inputLatex, renderInput, {
-            throwOnError: false,
-            displayMode: true
-        });
-        
-        katex.render(resultLatex, renderResult, {
-            throwOnError: false,
-            displayMode: true
-        });
 
+        const svgGraph = generate_graph_svg(rawInput);
+        if (svgGraph && svgGraph.trim().length > 0) {
+            document.getElementById('pod-graph').style.display = 'block';
+            graphContainer.innerHTML = svgGraph;
+            graphContainer.appendChild(tooltip);
+            graphContainer.appendChild(crosshair);
+            updateGraphInteractivity(rawInput);
+            
+            const svgEl = graphContainer.querySelector('svg');
+            if (svgEl) {
+                svgEl.style.maxWidth = "100%";
+                svgEl.style.height = "auto";
+            }
+        } else {
+            document.getElementById('pod-graph').style.display = 'none';
+        }
+
+        katex.render(inputLatex, renderInput, { throwOnError: false, displayMode: true });
+        katex.render(resultLatex, renderResult, { throwOnError: false, displayMode: true });
         renderSteps(stepsJson);
       } catch (err) {
         console.error("Execution error:", err);

@@ -1,26 +1,20 @@
 mod ast;
 mod calculus;
+mod definite;
 mod engine;
 mod heuristics;
 mod risch;
-
-#[cfg(not(target_arch = "wasm32"))]
 mod ui;
 
-#[cfg(not(target_arch = "wasm32"))]
 use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-#[cfg(not(target_arch = "wasm32"))]
 use ratatui::{backend::CrosstermBackend, Terminal};
-#[cfg(not(target_arch = "wasm32"))]
 use std::io;
-#[cfg(not(target_arch = "wasm32"))]
 use ui::App;
 
-#[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -33,14 +27,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
-    if let Err(e) = res { eprintln!("{e:?}"); }
+    if let Err(e) = res {
+        eprintln!("{e:?}");
+    }
     Ok(())
 }
 
-#[cfg(target_arch = "wasm32")]
-fn main() {}
-
-#[cfg(not(target_arch = "wasm32"))]
 fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> {
     let mut app = App::new();
 
@@ -48,7 +40,9 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
         terminal.draw(|f| ui::draw(f, &app))?;
 
         if let Event::Key(key) = event::read()? {
-            if key.kind != KeyEventKind::Press { continue; }
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
 
             match key.code {
                 KeyCode::Char(c) => {

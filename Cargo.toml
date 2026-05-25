@@ -6,6 +6,9 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.102"
 nom = "8.0"
+plotters = { version = "0.3.7", features = ["svg_backend"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 thiserror = "2.0"
 wasm-bindgen = "0.2"
 

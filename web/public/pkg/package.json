@@ -1,0 +1,15 @@
+{
+  "name": "tusk",
+  "type": "module",
+  "version": "0.2.0",
+  "files": [
+    "tusk_bg.wasm",
+    "tusk.js",
+    "tusk.d.ts"
+  ],
+  "main": "tusk.js",
+  "types": "tusk.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
