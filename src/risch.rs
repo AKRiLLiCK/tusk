@@ -87,13 +87,12 @@ impl Poly {
             x = y;
             y = r;
         }
-        if let Some(&lead) = x.coeffs.last() {
-            if lead.abs() > 1e-9 {
+        if let Some(&lead) = x.coeffs.last()
+            && lead.abs() > 1e-9 {
                 for c in &mut x.coeffs {
                     *c /= lead;
                 }
             }
-        }
         x
     }
 }
@@ -163,15 +162,14 @@ fn expr_to_poly(expr: &Expr, var: &str) -> Option<Poly> {
         }
         Expr::Pow(base, exp) => {
             let bp = expr_to_poly(base, var)?;
-            if let Expr::Const(e) = **exp {
-                if e >= 0.0 && (e as usize) as f64 == e {
+            if let Expr::Const(e) = **exp
+                && e >= 0.0 && (e as usize) as f64 == e {
                     let mut res = Poly::new(vec![1.0]);
                     for _ in 0..(e as usize) {
                         res = &res * &bp;
                     }
                     return Some(res);
                 }
-            }
             None
         }
         _ => None,
@@ -220,6 +218,7 @@ fn poly_to_expr(p: &Poly, var: &str) -> Expr {
     sum.unwrap_or(Expr::Const(0.0))
 }
 
+#[allow(clippy::needless_range_loop)]
 fn solve_linear_system(matrix: &mut [Vec<f64>], target: &mut [f64]) -> Option<Vec<f64>> {
     let n = matrix.len();
     if n == 0 {

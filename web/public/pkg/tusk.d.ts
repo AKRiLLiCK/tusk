@@ -1,16 +1,25 @@
 /* tslint:disable */
 /* eslint-disable */
 
-export function generate_graph_svg(expression: string): string;
+export function eval_math(expression: string, x_val: number): number;
+
+export function generate_graph_data(expression: string, force_bounds: boolean, in_x_min: number, in_x_max: number, in_y_min: number, in_y_max: number): string;
+
+export function parse_to_latex(input: string): string;
 
 export function solve_latex(input: string): string;
+
+export function solve_steps_json(input: string): string;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
-    readonly generate_graph_svg: (a: number, b: number) => [number, number];
+    readonly eval_math: (a: number, b: number, c: number) => number;
+    readonly generate_graph_data: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
+    readonly parse_to_latex: (a: number, b: number) => [number, number];
     readonly solve_latex: (a: number, b: number) => [number, number];
+    readonly solve_steps_json: (a: number, b: number) => [number, number];
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;

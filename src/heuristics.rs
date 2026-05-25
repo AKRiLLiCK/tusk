@@ -339,9 +339,9 @@ impl Transform for Substitution {
                 });
             }
 
-            if let Expr::Mul(c, u_part) = &**num {
-                if let Expr::Const(cv) = **c {
-                    if **u_part == sim_du || **u_part == du {
+            if let Expr::Mul(c, u_part) = &**num
+                && let Expr::Const(cv) = **c
+                    && (**u_part == sim_du || **u_part == du) {
                         return Some(Transformation {
                             new_state: Expr::Mul(
                                 Box::new(Expr::Const(cv)),
@@ -355,12 +355,10 @@ impl Transform for Substitution {
                             },
                         });
                     }
-                }
-            }
 
-            if let Expr::Mul(c, u_part) = &sim_du {
-                if let Expr::Const(cv) = **c {
-                    if **u_part == **num {
+            if let Expr::Mul(c, u_part) = &sim_du
+                && let Expr::Const(cv) = **c
+                    && **u_part == **num {
                         return Some(Transformation {
                             new_state: Expr::Mul(
                                 Box::new(Expr::Div(
@@ -377,8 +375,6 @@ impl Transform for Substitution {
                             },
                         });
                     }
-                }
-            }
         }
 
         let Expr::Mul(left, right) = &**integrand else {

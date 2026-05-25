@@ -2,15 +2,51 @@
 
 /**
  * @param {string} expression
+ * @param {number} x_val
+ * @returns {number}
+ */
+export function eval_math(expression, x_val) {
+    const ptr0 = passStringToWasm0(expression, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.eval_math(ptr0, len0, x_val);
+    return ret;
+}
+
+/**
+ * @param {string} expression
+ * @param {boolean} force_bounds
+ * @param {number} in_x_min
+ * @param {number} in_x_max
+ * @param {number} in_y_min
+ * @param {number} in_y_max
  * @returns {string}
  */
-export function generate_graph_svg(expression) {
+export function generate_graph_data(expression, force_bounds, in_x_min, in_x_max, in_y_min, in_y_max) {
     let deferred2_0;
     let deferred2_1;
     try {
         const ptr0 = passStringToWasm0(expression, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
-        const ret = wasm.generate_graph_svg(ptr0, len0);
+        const ret = wasm.generate_graph_data(ptr0, len0, force_bounds, in_x_min, in_x_max, in_y_min, in_y_max);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} input
+ * @returns {string}
+ */
+export function parse_to_latex(input) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.parse_to_latex(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);
@@ -30,6 +66,25 @@ export function solve_latex(input) {
         const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.solve_latex(ptr0, len0);
+        deferred2_0 = ret[0];
+        deferred2_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+    }
+}
+
+/**
+ * @param {string} input
+ * @returns {string}
+ */
+export function solve_steps_json(input) {
+    let deferred2_0;
+    let deferred2_1;
+    try {
+        const ptr0 = passStringToWasm0(input, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.solve_steps_json(ptr0, len0);
         deferred2_0 = ret[0];
         deferred2_1 = ret[1];
         return getStringFromWasm0(ret[0], ret[1]);

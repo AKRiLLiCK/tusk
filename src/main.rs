@@ -59,11 +59,10 @@ fn run(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> io::Result<()> 
                         app.reparse();
                     }
                 }
-                KeyCode::Up => {
-                    if app.selected_step > 0 {
+                KeyCode::Up
+                    if app.selected_step > 0 => {
                         app.selected_step -= 1;
                     }
-                }
                 KeyCode::Down => {
                     let max = app.engine.as_ref().map_or(0, |e| e.steps.len());
                     if app.selected_step < max {

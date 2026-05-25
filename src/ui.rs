@@ -43,6 +43,12 @@ pub struct App {
     pub active_ghost: usize,
 }
 
+impl Default for App {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl App {
     pub fn new() -> Self {
         Self {

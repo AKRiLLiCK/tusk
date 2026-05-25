@@ -15,7 +15,7 @@ A high-performance Rust Terminal UI calculus engine for step-by-step symbolic in
 ---
 
 <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-24292e.svg?style=flat-square&logo=github" alt="License: MIT" /></a>
-<img src="https://img.shields.io/badge/Release-0.2.0-9f3fdf.svg?style=flat-square&logo=github" alt="Release: 0.2.0" />
+<img src="https://img.shields.io/badge/Release-2.0.0-9f3fdf.svg?style=flat-square&logo=github" alt="Release: 2.0.0" />
 <img src="https://img.shields.io/badge/CI-Passing-2ea44f.svg?style=flat-square&logo=githubactions&logoColor=white" alt="CI: Status" />
 
 ## <img src="https://api.iconify.design/lucide:cpu.svg?color=%23b48cff" width="18" height="18" /> Features

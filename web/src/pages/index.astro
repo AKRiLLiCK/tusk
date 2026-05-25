@@ -270,19 +270,64 @@
       border-color: var(--accent);
       box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow);
     }
-    .wa-search-bar input {
+    .input-container {
       flex: 1;
-      padding: 1.1rem 1.4rem;
-      background: transparent;
-      border: none;
-      color: #fff;
-      font-size: 1.1rem;
-      outline: none;
-      font-family: 'JetBrains Mono', monospace;
-      font-weight: 400;
+      position: relative;
+      display: flex;
     }
-    .wa-search-bar input::placeholder {
+    .input-container input, .wa-highlight, .wa-ghost {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.1rem;
+      padding: 1.1rem 1.4rem;
+      margin: 0;
+      border: none;
+      width: 100%;
+      height: 100%;
+      white-space: pre;
+      overflow: hidden;
+      text-align: left;
+      box-sizing: border-box;
+    }
+    .input-container input {
+      background: transparent;
+      color: transparent;
+      caret-color: #fff;
+      outline: none;
+      z-index: 3;
+      position: relative;
+    }
+    .input-container input::placeholder {
       color: var(--text-muted);
+      -webkit-text-fill-color: var(--text-muted);
+    }
+    .wa-highlight {
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 2;
+      color: #fff;
+      pointer-events: none;
+    }
+    .wa-ghost {
+      position: absolute;
+      top: 0; left: 0;
+      z-index: 1;
+      color: transparent;
+      pointer-events: none;
+    }
+    .wa-ghost .suggestion {
+      color: var(--text-muted);
+    }
+    .wa-ghost .signature-hint {
+      color: var(--text-dim);
+    }
+    .wa-ghost .param {
+      border: 1px solid var(--text-dim);
+      border-radius: 6px;
+      padding: 0px 5px;
+      margin: 0 4px;
+      font-size: 0.85em;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.02);
     }
     .wa-search-bar button {
       background: var(--accent);
@@ -294,6 +339,7 @@
       font-weight: 600;
       font-family: 'Inter', sans-serif;
       transition: background 0.2s, transform 0.1s;
+      z-index: 4;
     }
     .wa-search-bar button:hover {
       background: var(--accent-dim);
@@ -526,7 +572,7 @@
     </nav>
 
     <header class="tusk-hero">
-      <div class="hero-title">
+      <div class="hero-title" id="hero-title">
         You can
         <div class="scroller">
           <div class="scroller-inner">
@@ -540,7 +586,11 @@
       </div>
 
       <div class="wa-search-bar">
-        <input type="text" id="waInput" placeholder="int(x^2 + sin(x))" autocomplete="off" spellcheck="false" />
+        <div class="input-container">
+          <div class="wa-highlight" id="wa-highlight"></div>
+          <div class="wa-ghost" id="wa-ghost"></div>
+          <input type="text" id="waInput" placeholder="integral(x^2 + sin(x) of dx)" autocomplete="off" spellcheck="false" />
+        </div>
         <button id="waSubmit">=</button>
       </div>
     </header>
@@ -553,7 +603,7 @@
 
       <div class="wa-pod" id="pod-graph" style="display: none;">
         <h2 class="wa-pod-title">Function Plot</h2>
-        <div class="wa-pod-content" id="graphContainer" style="padding: 1rem;">
+        <div class="wa-pod-content" id="graphContainer" style="padding: 1rem; cursor: grab; position: relative; user-select: none;">
           <!-- SVG will be injected here -->
         </div>
       </div>
@@ -596,7 +646,7 @@
   </footer>
 
   <script type="module">
-    import init, { solve_latex, parse_to_latex, solve_steps_json, generate_graph_svg, eval_math } from '/tusk/pkg/tusk.js';
+    import init, { solve_latex, parse_to_latex, solve_steps_json, generate_graph_data, eval_math } from '/tusk/pkg/tusk.js';
 
     async function loadEngine() {
       try {
@@ -617,48 +667,115 @@
     let currentMinY = -10;
     let currentMaxY = 10;
 
-    function updateGraphInteractivity(expr) {
-      currentExpr = expr;
-      let minY = Number.MAX_VALUE;
-      let maxY = -Number.MAX_VALUE;
-      for (let i = -100; i <= 100; i++) {
-        let y = eval_math(expr, i / 10.0);
-        if (isFinite(y) && !isNaN(y)) {
-          if (y < minY) minY = y;
-          if (y > maxY) maxY = y;
+    let currentGraphData = null;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    
+    function refreshGraph(force_bounds) {
+        if (!currentGraphData || !currentGraphData.plot_expr) return;
+        const rawInput = document.getElementById('waInput').value.trim();
+        const graphDataJson = generate_graph_data(
+            rawInput, 
+            force_bounds, 
+            currentGraphData.x_min, 
+            currentGraphData.x_max, 
+            currentGraphData.y_min, 
+            currentGraphData.y_max
+        );
+        if (graphDataJson && graphDataJson !== "{}") {
+            const graphData = JSON.parse(graphDataJson);
+            currentGraphData = graphData;
+            graphContainer.innerHTML = graphData.svg;
+            document.body.appendChild(tooltip);
+            document.body.appendChild(crosshair);
+            
+            const svgEl = graphContainer.querySelector('svg');
+            if (svgEl) {
+                svgEl.style.maxWidth = "100%";
+                svgEl.style.height = "auto";
+                svgEl.style.pointerEvents = "none";
+            }
         }
-      }
-      if (minY === Number.MAX_VALUE) {
-        minY = -10; maxY = 10;
-      } else {
-        let margin = Math.max(maxY - minY, 1.0) * 0.1;
-        minY -= margin;
-        maxY += margin;
-        if (maxY - minY < 1e-6) {
-          minY -= 1.0; maxY += 1.0;
-        }
-      }
-      currentMinY = minY;
-      currentMaxY = maxY;
     }
+
+    graphContainer.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        graphContainer.style.cursor = 'grabbing';
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        graphContainer.style.cursor = 'grab';
+    });
+    
+    graphContainer.addEventListener('mouseleave', () => {
+        isDragging = false;
+        graphContainer.style.cursor = 'grab';
+        tooltip.style.display = 'none';
+        crosshair.style.display = 'none';
+    });
+
+    graphContainer.addEventListener('wheel', (e) => {
+        if (!currentGraphData) return;
+        e.preventDefault();
+        
+        const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+        
+        const xRange = currentGraphData.x_max - currentGraphData.x_min;
+        const yRange = currentGraphData.y_max - currentGraphData.y_min;
+        
+        const xCenter = (currentGraphData.x_min + currentGraphData.x_max) / 2.0;
+        const yCenter = (currentGraphData.y_min + currentGraphData.y_max) / 2.0;
+        
+        currentGraphData.x_min = xCenter - (xRange * zoomFactor) / 2.0;
+        currentGraphData.x_max = xCenter + (xRange * zoomFactor) / 2.0;
+        currentGraphData.y_min = yCenter - (yRange * zoomFactor) / 2.0;
+        currentGraphData.y_max = yCenter + (yRange * zoomFactor) / 2.0;
+        
+        refreshGraph(true);
+    });
 
     graphContainer.addEventListener('mousemove', (e) => {
       const svg = graphContainer.querySelector('svg');
-      if (!svg || !currentExpr) return;
+      if (!svg || !currentGraphData) return;
       
       const rect = svg.getBoundingClientRect();
-      let xPixel = e.clientX - rect.left;
+      let scaleX = rect.width / 800;
+      let scaleY = rect.height / 600;
       
-      let scaleX = rect.width / 600;
-      let scaleY = rect.height / 400;
+      if (isDragging) {
+          const dx = e.clientX - dragStartX;
+          const dy = e.clientY - dragStartY;
+          
+          const dxMath = -(dx / rect.width) * (currentGraphData.x_max - currentGraphData.x_min);
+          const dyMath = (dy / rect.height) * (currentGraphData.y_max - currentGraphData.y_min);
+          
+          currentGraphData.x_min += dxMath;
+          currentGraphData.x_max += dxMath;
+          currentGraphData.y_min += dyMath;
+          currentGraphData.y_max += dyMath;
+          
+          dragStartX = e.clientX;
+          dragStartY = e.clientY;
+          
+          refreshGraph(true);
+          return;
+      }
+      
+      let xPixel = e.clientX - rect.left;
+
       
       let svgX = xPixel / scaleX;
-      let math_x = -10 + ((svgX - 60) / 520) * 20;
       
-      if (math_x < -10) math_x = -10;
-      if (math_x > 10) math_x = 10;
+      let math_x = currentGraphData.x_min + (svgX / 800) * (currentGraphData.x_max - currentGraphData.x_min);
       
-      let math_y = eval_math(currentExpr, math_x);
+      if (math_x < currentGraphData.x_min) math_x = currentGraphData.x_min;
+      if (math_x > currentGraphData.x_max) math_x = currentGraphData.x_max;
+      
+      let math_y = eval_math(currentGraphData.plot_expr, math_x);
       
       if (isNaN(math_y) || !isFinite(math_y)) {
         tooltip.style.display = 'none';
@@ -666,23 +783,26 @@
         return;
       }
       
-      let y_px = 350 - ((math_y - currentMinY) / (currentMaxY - currentMinY)) * 330;
-      let x_px = 60 + ((math_x - (-10)) / 20) * 520;
+      let y_px = 600 - ((math_y - currentGraphData.y_min) / (currentGraphData.y_max - currentGraphData.y_min)) * 600;
+      let x_px = ((math_x - currentGraphData.x_min) / (currentGraphData.x_max - currentGraphData.x_min)) * 800;
       
-      crosshair.style.left = (x_px * scaleX) + 'px';
-      crosshair.style.top = (y_px * scaleY) + 'px';
+      let pageX = rect.left + window.scrollX + (x_px * scaleX);
+      let pageY = rect.top + window.scrollY + (y_px * scaleY);
+
+      crosshair.style.left = pageX + 'px';
+      crosshair.style.top = pageY + 'px';
       crosshair.style.display = 'block';
       
-      tooltip.style.left = (x_px * scaleX) + 'px';
-      tooltip.style.top = (y_px * scaleY - 15) + 'px';
+      tooltip.style.left = pageX + 'px';
+      tooltip.style.top = (pageY - 15) + 'px';
       tooltip.innerHTML = `x: ${math_x.toFixed(2)}<br>y: ${math_y.toFixed(2)}`;
       tooltip.style.display = 'block';
     });
+      
+    // the rest of the mousemove block was replaced above
 
-    graphContainer.addEventListener('mouseleave', () => {
-      tooltip.style.display = 'none';
-      crosshair.style.display = 'none';
-    });
+    // Mouseleave is handled above, but keeping empty just in case
+
 
     function renderSteps(stepsJson) {
       const container = document.getElementById('steps-container');
@@ -746,7 +866,9 @@
         transformation.className = 'step-transformation';
 
         body.appendChild(rule);
-        body.appendChild(detail);
+        if (step.change_detail && step.change_detail.trim() !== '') {
+          body.appendChild(detail);
+        }
         body.appendChild(transformation);
         item.appendChild(badge);
         item.appendChild(body);
@@ -773,6 +895,15 @@
       });
     }
 
+    const placeholders = [
+      "integral(x^2 + sin(x) of dx)",
+      "d/dx(x^2 * sin(x))",
+      "integral(x*y of dx from 1 to 10; dy from 0 to 5)",
+      "x^2 = 4",
+      "integral(x*cos(x) + y of dx from 1 to 10)"
+    ];
+    document.getElementById('waInput').placeholder = placeholders[Math.floor(Math.random() * placeholders.length)];
+
     window.runEnginePipeline = function() {
       const input = document.getElementById('waInput');
       const renderInput = document.getElementById('wa-input-render');
@@ -780,6 +911,9 @@
 
       if (!input || !input.value.trim()) return;
       const rawInput = input.value.trim();
+      
+      const heroTitle = document.getElementById('hero-title');
+      if (heroTitle) heroTitle.style.display = 'none';
 
       try {
         const inputLatex = parse_to_latex(rawInput);
@@ -789,19 +923,12 @@
         document.getElementById('pod-input').style.display = 'block';
         document.getElementById('pod-result').style.display = 'block';
 
-        const svgGraph = generate_graph_svg(rawInput);
-        if (svgGraph && svgGraph.trim().length > 0) {
+        const graphDataJson = generate_graph_data(rawInput, false, 0.0, 0.0, 0.0, 0.0);
+        if (graphDataJson && graphDataJson !== "{}") {
+            const graphData = JSON.parse(graphDataJson);
+            currentGraphData = graphData;
             document.getElementById('pod-graph').style.display = 'block';
-            graphContainer.innerHTML = svgGraph;
-            graphContainer.appendChild(tooltip);
-            graphContainer.appendChild(crosshair);
-            updateGraphInteractivity(rawInput);
-            
-            const svgEl = graphContainer.querySelector('svg');
-            if (svgEl) {
-                svgEl.style.maxWidth = "100%";
-                svgEl.style.height = "auto";
-            }
+            refreshGraph(false);
         } else {
             document.getElementById('pod-graph').style.display = 'none';
         }
@@ -814,9 +941,188 @@
       }
     }
 
+    const waInput = document.getElementById('waInput');
+    const waHighlight = document.getElementById('wa-highlight');
+    const waGhost = document.getElementById('wa-ghost');
+
+    const dictionary = ['integral', 'of', 'from', 'to', 'dx', 'dy', 'dz', 'sin', 'cos', 'tan', 'ln', 'log', 'sqrt', 'derivative'];
+    let currentSuggestion = "";
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, function(m) {
+        switch (m) {
+          case '&': return '&amp;';
+          case '<': return '&lt;';
+          case '>': return '&gt;';
+          case '"': return '&quot;';
+          case "'": return '&#039;';
+          default: return m;
+        }
+      });
+    }
+
+    function highlight(text) {
+      return text.replace(/([a-zA-Z]+|\d+(?:\.\d+)?|[^a-zA-Z\d\s])/g, (match) => {
+        if (/^(integral|of|from|to|dx|dy|dz)$/.test(match)) {
+          return `<span style="color: var(--accent);">${match}</span>`;
+        }
+        if (/^(sin|cos|tan|ln|log|sqrt|derivative)$/.test(match)) {
+          return `<span style="color: #60a5fa;">${match}</span>`;
+        }
+        if (/^\d+(?:\.\d+)?$/.test(match)) {
+          return `<span style="color: #f472b6;">${match}</span>`;
+        }
+        if (/^[a-zA-Z]+$/.test(match)) {
+          return `<span style="color: #fff; font-style: italic;">${match}</span>`;
+        }
+        const escaped = escapeHtml(match);
+        if (/[()+\-*/^=;,]/.test(match)) {
+          return `<span style="color: var(--text-dim);">${escaped}</span>`;
+        }
+        return escaped;
+      });
+    }
+
+    function getSignatureHint(val) {
+      let depth = 0;
+      let foundIndex = -1;
+      for (let i = val.length - 1; i >= 0; i--) {
+        if (val[i] === ')') {
+          depth++;
+        } else if (val[i] === '(') {
+          if (depth > 0) {
+            depth--;
+          } else {
+            foundIndex = i;
+            break;
+          }
+        }
+      }
+
+      if (foundIndex === -1) return null;
+
+      const prefix = val.slice(0, foundIndex);
+      const match = prefix.match(/\b(integral|derivative|simplify|graph|d\/dx|d\/dy|d\/dz)\s*$/i);
+      if (!match) return null;
+      
+      const func = match[1].toLowerCase();
+      const inside = val.slice(foundIndex + 1);
+      
+      let html = "";
+      let completion = "";
+      
+      const param = (name) => `<span class="param">${name}</span>`;
+      const getComp = (kw) => {
+        if (inside.trim() === '') return "";
+        if (kw === ')') return ")";
+        return inside.endsWith(' ') ? kw + " " : " " + kw + " ";
+      };
+
+      if (func === 'integral') {
+        const hasOf = /\bof\b/i.test(inside);
+        const hasFrom = /\bfrom\b/i.test(inside);
+        const hasTo = /\bto\b/i.test(inside);
+
+        if (!hasOf) {
+          if (inside.trim() === '') html += param("expr");
+          const sp = (inside !== '' && !inside.endsWith(' ')) ? ' ' : '';
+          html += `${sp}of ${param("var")} from ${param("lower")} to ${param("upper")})`;
+          completion = inside.trim() === '' ? "" : getComp("of");
+        } else if (!hasFrom) {
+          const afterOf = inside.split(/\bof\b/i)[1];
+          if (afterOf.trim() === '') html += (afterOf.endsWith(' ') ? '' : ' ') + param("var");
+          const sp = (afterOf !== '' && !afterOf.endsWith(' ')) ? ' ' : '';
+          html += `${sp}from ${param("lower")} to ${param("upper")})`;
+          completion = afterOf.trim() === '' ? "" : getComp("from");
+        } else if (!hasTo) {
+          const afterFrom = inside.split(/\bfrom\b/i)[1];
+          if (afterFrom.trim() === '') html += (afterFrom.endsWith(' ') ? '' : ' ') + param("lower");
+          const sp = (afterFrom !== '' && !afterFrom.endsWith(' ')) ? ' ' : '';
+          html += `${sp}to ${param("upper")})`;
+          completion = afterFrom.trim() === '' ? "" : getComp("to");
+        } else {
+          const afterTo = inside.split(/\bto\b/i)[1];
+          if (afterTo.trim() === '') html += (afterTo.endsWith(' ') ? '' : ' ') + param("upper");
+          html += `)`;
+          completion = afterTo.trim() === '' ? "" : getComp(")");
+        }
+      } else if (func === 'derivative') {
+        const hasOf = /\bof\b/i.test(inside);
+        if (!hasOf) {
+          if (inside.trim() === '') html += param("expr");
+          const sp = (inside !== '' && !inside.endsWith(' ')) ? ' ' : '';
+          html += `${sp}of ${param("var")})`;
+          completion = inside.trim() === '' ? "" : getComp("of");
+        } else {
+          const afterOf = inside.split(/\bof\b/i)[1];
+          if (afterOf.trim() === '') html += (afterOf.endsWith(' ') ? '' : ' ') + param("var");
+          html += `)`;
+          completion = afterOf.trim() === '' ? "" : getComp(")");
+        }
+      } else {
+        if (inside.trim() === '') html += param("expr");
+        html += `)`;
+        completion = inside.trim() === '' ? "" : getComp(")");
+      }
+      
+      return { html, completion };
+    }
+
+
+    waInput?.addEventListener('input', () => {
+      const val = waInput.value;
+      if (val === '') {
+        waHighlight.innerHTML = '';
+        waGhost.innerHTML = '';
+        currentSuggestion = "";
+        return;
+      }
+
+      waHighlight.innerHTML = highlight(val);
+      
+      let suggestionHtml = "";
+      let suggestionCompletion = "";
+      
+      const matchWord = val.match(/[a-zA-Z]+$/);
+      if (matchWord) {
+        const word = matchWord[0];
+        const suggestion = dictionary.find(w => w.startsWith(word) && w !== word);
+        if (suggestion) {
+          suggestionCompletion = suggestion.slice(word.length);
+          suggestionHtml += `<span class="suggestion">${suggestionCompletion}</span>`;
+        }
+      }
+
+      const sig = getSignatureHint(val + suggestionCompletion);
+      if (sig) {
+        suggestionHtml += `<span class="signature-hint">${sig.html}</span>`;
+        if (!suggestionCompletion && sig.completion) {
+          suggestionCompletion = sig.completion;
+        }
+      }
+      
+      currentSuggestion = suggestionCompletion;
+      if (suggestionHtml) {
+        waGhost.innerHTML = escapeHtml(val) + suggestionHtml;
+      } else {
+        waGhost.innerHTML = "";
+      }
+    });
+
+    waInput?.addEventListener('scroll', () => {
+      if (waHighlight) waHighlight.scrollLeft = waInput.scrollLeft;
+      if (waGhost) waGhost.scrollLeft = waInput.scrollLeft;
+    });
+
     document.getElementById('waSubmit')?.addEventListener('click', window.runEnginePipeline);
-    document.getElementById('waInput')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') window.runEnginePipeline();
+    waInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Tab' && currentSuggestion) {
+        e.preventDefault();
+        waInput.value += currentSuggestion;
+        waInput.dispatchEvent(new Event('input'));
+      } else if (e.key === 'Enter') {
+        window.runEnginePipeline();
+      }
     });
   </script>
 </body>

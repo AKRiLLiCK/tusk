@@ -1,6 +1,7 @@
 use crate::ast::Expr;
 use crate::engine::DomainError;
 
+#[allow(dead_code)]
 pub fn eval(expr: &Expr, target_var: &str, val: f64) -> Result<f64, DomainError> {
     match expr {
         Expr::Const(c) => Ok(*c),
@@ -130,8 +131,8 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
         )),
         Expr::Exp(i) if matches!(&**i, Expr::Var(v) if v == var) => Some(Expr::Exp(i.clone())),
         Expr::Pow(base, exp) => {
-            if let (Expr::Var(v), Expr::Const(n)) = (&**base, &**exp) {
-                if v == var && *n != -1.0 {
+            if let (Expr::Var(v), Expr::Const(n)) = (&**base, &**exp)
+                && v == var && *n != -1.0 {
                     let m = n + 1.0;
                     return Some(Expr::Mul(
                         Box::new(Expr::Div(
@@ -141,28 +142,24 @@ pub fn simple_integrate(expr: &Expr, var: &str) -> Option<Expr> {
                         Box::new(Expr::Pow(base.clone(), Box::new(Expr::Const(m)))),
                     ));
                 }
-            }
             None
         }
         Expr::Mul(l, r) => {
-            if let Expr::Const(_) = **l {
-                if let Some(int_r) = simple_integrate(r, var) {
+            if let Expr::Const(_) = **l
+                && let Some(int_r) = simple_integrate(r, var) {
                     return Some(Expr::Mul(l.clone(), Box::new(int_r)));
                 }
-            }
-            if let Expr::Const(_) = **r {
-                if let Some(int_l) = simple_integrate(l, var) {
+            if let Expr::Const(_) = **r
+                && let Some(int_l) = simple_integrate(l, var) {
                     return Some(Expr::Mul(r.clone(), Box::new(int_l)));
                 }
-            }
             None
         }
         Expr::Div(l, r) => {
-            if let Expr::Const(_) = **r {
-                if let Some(int_l) = simple_integrate(l, var) {
+            if let Expr::Const(_) = **r
+                && let Some(int_l) = simple_integrate(l, var) {
                     return Some(Expr::Div(Box::new(int_l), r.clone()));
                 }
-            }
             None
         }
         _ => None,

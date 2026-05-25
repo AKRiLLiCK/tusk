@@ -50,7 +50,7 @@ fn float_to_frac(val: f64) -> Option<(i64, i64)> {
     None
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum Expr {
     Var(String),
     Const(f64),
@@ -98,10 +98,17 @@ impl Expr {
                 }
             }
             Self::Add(l, r) => format!("{} + {}", l.to_latex(), r.to_latex()),
-            Self::Sub(l, r) => format!("{} - {}", l.to_latex(), r.to_latex()),
+            Self::Sub(l, r) => {
+                let r_latex = r.to_latex();
+                if r_latex.starts_with('-') {
+                    format!("{} + {}", l.to_latex(), &r_latex[1..])
+                } else {
+                    format!("{} - {}", l.to_latex(), r_latex)
+                }
+            },
             Self::Mul(l, r) => {
-                if let Expr::Const(c) = **l {
-                    if let Some((num, den)) = float_to_frac(c) {
+                if let Expr::Const(c) = **l
+                    && let Some((num, den)) = float_to_frac(c) {
                         let r_str = match **r {
                             Self::Add(..) | Self::Sub(..) => {
                                 format!("\\left({}\\right)", r.to_latex())
@@ -116,7 +123,6 @@ impl Expr {
                             return format!("\\frac{{{} \\cdot {}}}{{{}}}", num, r_str, den);
                         }
                     }
-                }
                 let l_str = match **l {
                     Self::Add(..) | Self::Sub(..) => format!("\\left({}\\right)", l.to_latex()),
                     _ => l.to_latex(),
@@ -242,6 +248,41 @@ fn parse_var(input: &str) -> IResult<&str, Expr, Error<&str>> {
     map(ws(alpha1), |s: &str| Expr::Var(s.to_string())).parse(input)
 }
 
+struct Domain {
+    variable: String,
+    lower: Option<Box<Expr>>,
+    upper: Option<Box<Expr>>,
+}
+
+fn parse_domain(input: &str) -> IResult<&str, Domain, Error<&str>> {
+    let (input, _) = opt(ws(char('d'))).parse(input)?;
+    let (input, variable) = ws(alpha1).parse(input)?;
+    let (input, has_from) = opt(ws(tag("from"))).parse(input)?;
+
+    if has_from.is_some() {
+        let (input, lower) = expr(input)?;
+        let (input, _) = ws(tag("to")).parse(input)?;
+        let (input, upper) = expr(input)?;
+        Ok((
+            input,
+            Domain {
+                variable: variable.to_string(),
+                lower: Some(Box::new(lower)),
+                upper: Some(Box::new(upper)),
+            },
+        ))
+    } else {
+        Ok((
+            input,
+            Domain {
+                variable: variable.to_string(),
+                lower: None,
+                upper: None,
+            },
+        ))
+    }
+}
+
 fn parse_integral(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, _) = ws(tag("integral")).parse(input)?;
     let (input, _) = ws(char('(')).parse(input)?;
@@ -249,41 +290,32 @@ fn parse_integral(input: &str) -> IResult<&str, Expr, Error<&str>> {
     let (input, mut exprs) = separated_list1(ws(char(';')), expr).parse(input)?;
 
     let (input, _) = ws(tag("of")).parse(input)?;
-    let (input, _) = opt(ws(char('d'))).parse(input)?;
-    let (input, variable) = ws(alpha1).parse(input)?;
+    let (input, domains) = separated_list1(ws(char(';')), parse_domain).parse(input)?;
+    let (input, _) = ws(char(')')).parse(input)?;
 
-    let (input, has_from) = opt(ws(tag("from"))).parse(input)?;
-
-    let integrand = if exprs.len() == 1 {
+    let mut integrand = if exprs.len() == 1 {
         Box::new(exprs.remove(0))
     } else {
         Box::new(Expr::System(exprs))
     };
 
-    if has_from.is_some() {
-        let (input, lower) = expr(input)?;
-        let (input, _) = ws(tag("to")).parse(input)?;
-        let (input, upper) = expr(input)?;
-        let (input, _) = ws(char(')')).parse(input)?;
-        Ok((
-            input,
-            Expr::DefiniteIntegral {
+    for domain in domains {
+        if let (Some(lower), Some(upper)) = (domain.lower, domain.upper) {
+            integrand = Box::new(Expr::DefiniteIntegral {
                 integrand,
-                variable: variable.to_string(),
-                lower: Box::new(lower),
-                upper: Box::new(upper),
-            },
-        ))
-    } else {
-        let (input, _) = ws(char(')')).parse(input)?;
-        Ok((
-            input,
-            Expr::Integral {
+                variable: domain.variable,
+                lower,
+                upper,
+            });
+        } else {
+            integrand = Box::new(Expr::Integral {
                 integrand,
-                variable: variable.to_string(),
-            },
-        ))
+                variable: domain.variable,
+            });
+        }
     }
+
+    Ok((input, *integrand))
 }
 
 fn parse_fn_call(input: &str) -> IResult<&str, Expr, Error<&str>> {

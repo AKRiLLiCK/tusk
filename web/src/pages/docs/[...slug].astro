@@ -1,0 +1,23 @@
+---
+import DocsLayout from '../../layouts/DocsLayout.astro';
+
+export async function getStaticPaths() {
+  const allFiles = Object.values(import.meta.glob('../../../../docs/*.md', { eager: true }));
+  const docs = allFiles.filter((doc: any) => !doc.file.endsWith('SUMMARY.md'));
+  return docs.map((doc: any) => {
+    const filename = doc.file.split('/').pop();
+    const slug = filename === 'README.md' ? undefined : filename.replace('.md', '');
+    return {
+      params: { slug },
+      props: { doc, allDocs: docs }
+    };
+  });
+}
+
+const { doc, allDocs } = Astro.props;
+const { slug } = Astro.params;
+---
+
+<DocsLayout docFiles={allDocs} activeSlug={slug}>
+  <doc.Content />
+</DocsLayout>

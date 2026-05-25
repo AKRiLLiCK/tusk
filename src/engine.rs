@@ -2,18 +2,20 @@ use crate::ast::Expr;
 use crate::heuristics::{AlpesIBP, BasicIntegration, PhaseZeroSimplifier, Substitution, SumRule};
 use crate::risch::RationalHermiteReduction;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[allow(dead_code)]
 pub enum DomainError {
     ConvergenceFailure,
     UnsupportedOperation,
     EvaluationError,
 }
 
+#[allow(dead_code)]
 pub trait SolveDomain {
     fn solve(&self, expr: &Expr) -> Result<Expr, DomainError>;
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 #[allow(dead_code)]
 pub enum RuleType {
     PhaseZero(String),
@@ -22,7 +24,7 @@ pub enum RuleType {
     HermiteReduction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Transformation {
     pub new_state: Expr,
     pub description: String,
@@ -32,7 +34,7 @@ pub struct Transformation {
     pub rule: RuleType,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Step {
     pub initial_state: Expr,
     pub transformation: Transformation,

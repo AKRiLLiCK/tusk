@@ -2,6 +2,7 @@ use crate::ast::Expr;
 use crate::calculus::{derive, eval};
 use crate::engine::{DomainError, SolveDomain};
 
+#[allow(dead_code)]
 pub struct DefiniteIntegrationDomain;
 
 impl SolveDomain for DefiniteIntegrationDomain {
@@ -28,8 +29,8 @@ impl SolveDomain for DefiniteIntegrationDomain {
                 let term_coeff_at_center = eval(&current_deriv, variable, center)?;
                 let c_n = term_coeff_at_center / factorial;
 
-                let term_int_upper = c_n * (b_val - center).powi(n as i32 + 1) / (n as f64 + 1.0);
-                let term_int_lower = c_n * (a_val - center).powi(n as i32 + 1) / (n as f64 + 1.0);
+                let term_int_upper = c_n * (b_val - center).powi(n + 1) / (n as f64 + 1.0);
+                let term_int_lower = c_n * (a_val - center).powi(n + 1) / (n as f64 + 1.0);
                 integral_val += term_int_upper - term_int_lower;
 
                 let next_deriv = derive(&current_deriv, variable);
@@ -40,8 +41,8 @@ impl SolveDomain for DefiniteIntegrationDomain {
                 let max_deriv = v1.max(v2).max(v3);
 
                 let next_factorial = factorial * (n as f64 + 1.0);
-                let r_a = (max_deriv / next_factorial) * (a_val - center).abs().powi(n as i32 + 1);
-                let r_b = (max_deriv / next_factorial) * (b_val - center).abs().powi(n as i32 + 1);
+                let r_a = (max_deriv / next_factorial) * (a_val - center).abs().powi(n + 1);
+                let r_b = (max_deriv / next_factorial) * (b_val - center).abs().powi(n + 1);
 
                 if r_a <= epsilon && r_b <= epsilon {
                     return Ok(Expr::Const(integral_val));
