@@ -7,7 +7,7 @@
     "build": "npm run copy-wasm && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "copy-wasm": "shx mkdir -p public/pkg && shx cp -r ../pk/* public/pkg/"
+    "copy-wasm": "shx mkdir -p public/pkg && shx cp -r ../pkg/* public/pkg/"
   },
   "dependencies": {
     "astro": "^6.1.8"
